@@ -1,0 +1,10 @@
+image: dlinov/scala-sbt:latest
+
+pipelines:
+  default:
+    - step:
+        caches:
+          - sbt
+          - ivy2
+        script:
+          - sbt clean coverage test coverageReport
