@@ -3,7 +3,7 @@ package io.dlinov.auth.dao.hikari
 import java.time.{Instant, ZoneOffset, ZonedDateTime}
 import java.util.UUID
 
-import cats.effect.{ContextShift, IO}
+import cats.effect.{Blocker, ContextShift, IO}
 import com.zaxxer.hikari.{HikariConfig, HikariDataSource}
 import doobie._
 import doobie.syntax.string._
@@ -33,10 +33,10 @@ class HikariDBFApi(
   config.setMinimumIdle(dbConfig.minIdle)
   config.setMaximumPoolSize(dbConfig.poolSize)
 
-  println(config.getJdbcUrl())
+  println(config.getJdbcUrl)
   private val hikariDataSource = new HikariDataSource(config)
   private val hikariTransactor: HikariTransactor[IO] =
-    HikariTransactor[IO](hikariDataSource, connectEC.ec, transactEC.ec)
+    HikariTransactor[IO](hikariDataSource, connectEC.ec, Blocker.liftExecutionContext(transactEC.ec))
 
   override val transactor: IO[HikariTransactor[IO]] = IO.pure(hikariTransactor)
 }
@@ -47,16 +47,17 @@ object HikariDBFApi {
     val logger = LoggerFactory.getLogger("sql")
     LogHandler {
 
+      // TODO: get rid of .toArray calls
       case Success(s, a, e1, e2) ⇒
         logger.debug(s"""Successful Statement Execution:
-            |  ${s.lines.dropWhile(_.trim.isEmpty).mkString("\n  ")}
+            |  ${s.lines.dropWhile(_.trim.isEmpty).toArray.mkString("\n  ")}
             | arguments = [${a.mkString(", ")}]
             | elapsed = ${e1.toMillis} ms exec + ${e2.toMillis} ms processing (${(e1 + e2).toMillis} ms total)
           """.stripMargin)
 
       case ProcessingFailure(s, a, e1, e2, t) ⇒
         logger.warn(s"""Failed Resultset Processing:
-            |  ${s.lines.dropWhile(_.trim.isEmpty).mkString("\n  ")}
+            |  ${s.lines.dropWhile(_.trim.isEmpty).toArray.mkString("\n  ")}
             | arguments = [${a.mkString(", ")}]
             | elapsed = ${e1.toMillis} ms exec + ${e2.toMillis} ms processing (failed) (${(e1 + e2).toMillis} ms total)
             | failure = ${t.getMessage}
@@ -64,7 +65,7 @@ object HikariDBFApi {
 
       case ExecFailure(s, a, e1, t) ⇒
         logger.error(s"""Failed Statement Execution:
-            |  ${s.lines.dropWhile(_.trim.isEmpty).mkString("\n  ")}
+            |  ${s.lines.dropWhile(_.trim.isEmpty).toArray.mkString("\n  ")}
             | arguments = [${a.mkString(", ")}]
             | elapsed = ${e1.toMillis} ms exec (failed)
             | failure = ${t.getMessage}

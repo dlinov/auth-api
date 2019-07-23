@@ -49,6 +49,6 @@ trait AuthenticationBehavior {
 }
 
 object AuthenticationBehavior {
-  private val publicKey: String = scala.io.Source.fromResource("auth.key.pub.kkk").mkString
+  private val publicKey: String = scala.io.Source.fromResource("auth.key.pub").mkString
   private val algorithms: Seq[JwtAsymmetricAlgorithm] = Seq(JwtAlgorithm.ES256)
 }
