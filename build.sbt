@@ -29,30 +29,31 @@ lazy val backoffice_api = (project in file("."))
 
 scalaVersion := "2.12.8"
 
-val catsVersion = "1.6.0"
-val circeVersion = "0.11.1"
-val doobieVersion = "0.6.0"
-val http4sVersion = "0.20.0"
-val http4sTracerVersion = "1.2.0"
-val rhoVersion = "0.19.0-M7"
+val catsVersion = "2.0.0-M4"
+val circeVersion = "0.12.0-M4"
+val doobieVersion = "0.8.0-M1"
+val http4sVersion = "0.20.6"
+val http4sTracerVersion = "1.2.1"
+val rhoVersion = "0.19.0"
 val monocleVersion = "1.5.1-cats"
-val pureConfigVersion = "0.10.2"
-val scalaCacheVersion = "0.27.0"
-val jwtVersion = "2.1.0"
-val macwireVersion = "2.3.2"
+val pureConfigVersion = "0.11.1"
+val scalaCacheVersion = "0.28.0"
+val jwtVersion = "3.1.0"
+val macwireVersion = "2.3.3"
 val scalaExtVersion = "0.5.3"
 val logbackVersion = "1.2.3"
-val mariaDbVersion = "2.3.0"
-val couchbaseVersion = "2.7.4"
-val hadoopVersion = "3.1.2"
+val mariaDbVersion = "2.4.2"
+val couchbaseVersion = "2.7.7"
+val hadoopVersion = "3.2.0"
+val bcVersion = "1.62"
 val commonsEmailVersion = "1.5"
-val commonsTextVersion = "1.6"
-val swaggerUiVersion = "3.20.9"
-val scalatestVersion = "3.0.5"
-val h2Version = "1.4.197"
+val commonsTextVersion = "1.7"
+val swaggerUiVersion = "3.23.0"
+val scalatestVersion = "3.0.8"
+
+val h2Version = "1.4.199"
 
 val AllTest = "it,test"
-
 libraryDependencies ++= Seq(
   "org.mariadb.jdbc" % "mariadb-java-client" % mariaDbVersion,
   "org.apache.commons" % "commons-email" % commonsEmailVersion,
@@ -82,6 +83,7 @@ libraryDependencies ++= Seq(
   "ch.qos.logback" % "logback-classic" % logbackVersion,
   "com.couchbase.client" % "java-client" % couchbaseVersion,
   "org.apache.hadoop" % "hadoop-client" % hadoopVersion,
+  "org.bouncycastle" % "bcprov-jdk15on" % bcVersion,
   "org.webjars" % "swagger-ui" % swaggerUiVersion,
 
   "com.softwaremill.macwire" %% "macros" % macwireVersion % Provided,
