@@ -4,7 +4,7 @@ import scalariform.formatter.preferences._
 enablePlugins(DockerPlugin, JavaAppPackaging)
 
 name := "auth-api"
-version := "1.0.25"
+version := "1.1.0"
 
 // to let integration tests use classes from test
 val MyIntegrationTestConfig = IntegrationTest.extend(Test)
@@ -17,7 +17,7 @@ MyIntegrationTestConfig / fork := true
 // because we share single db and clean it before each test
 MyIntegrationTestConfig / parallelExecution := false
 
-lazy val backoffice_api = (project in file("."))
+lazy val auth_api = (project in file("."))
   .enablePlugins(BuildInfoPlugin)
   .configs(MyIntegrationTestConfig)
   .settings(
@@ -27,31 +27,31 @@ lazy val backoffice_api = (project in file("."))
       BuildInfoKey.constant("swaggerVersion", swaggerUiVersion)),
     buildInfoPackage := "io.dlinov.auth")
 
-scalaVersion := "2.12.8"
+scalaVersion := "2.12.10"
 
-val catsVersion = "2.0.0-M4"
-val circeVersion = "0.12.0-M4"
-val doobieVersion = "0.8.0-M1"
-val http4sVersion = "0.20.6"
+val catsVersion = "2.0.0"
+val circeVersion = "0.12.2"
+val doobieVersion = "0.8.4"
+val http4sVersion = "0.21.0-M5"
 val http4sTracerVersion = "1.2.1"
 val rhoVersion = "0.19.0"
-val monocleVersion = "1.5.1-cats"
-val pureConfigVersion = "0.11.1"
+val monocleVersion = "2.0.0"
+val pureConfigVersion = "0.12.1"
 val scalaCacheVersion = "0.28.0"
-val jwtVersion = "3.1.0"
+val jwtVersion = "4.1.0"
 val macwireVersion = "2.3.3"
 val scalaExtVersion = "0.5.3"
 val logbackVersion = "1.2.3"
-val mariaDbVersion = "2.4.2"
-val couchbaseVersion = "2.7.7"
-val hadoopVersion = "3.2.0"
-val bcVersion = "1.62"
+val mariaDbVersion = "2.5.1"
+val couchbaseVersion = "2.7.9"
+val hadoopVersion = "3.2.1"
+val bcVersion = "1.64"
 val commonsEmailVersion = "1.5"
-val commonsTextVersion = "1.7"
-val swaggerUiVersion = "3.23.0"
+val commonsTextVersion = "1.8"
+val swaggerUiVersion = "3.24.0"
 val scalatestVersion = "3.0.8"
 
-val h2Version = "1.4.199"
+val h2Version = "1.4.200"
 
 val AllTest = "it,test"
 libraryDependencies ++= Seq(

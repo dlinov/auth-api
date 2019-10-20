@@ -4,6 +4,7 @@ import pureconfig.generic.auto._ // important!
 import AppConfig._
 
 import scala.concurrent.duration.{Duration, FiniteDuration}
+import pureconfig.ConfigSource
 
 case class AppConfig(
     db: DbConfig,
@@ -16,7 +17,7 @@ case class AppConfig(
     proxy: ProxyConfig)
 
 object AppConfig {
-  def load: AppConfig = pureconfig.loadConfigOrThrow[AppConfig]("fp")
+  def load: AppConfig = ConfigSource.default.at("fp").loadOrThrow[AppConfig]
 
   case class GlobalConfig(
       host: String)

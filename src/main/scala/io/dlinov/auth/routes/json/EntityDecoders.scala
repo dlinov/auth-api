@@ -1,7 +1,6 @@
 package io.dlinov.auth.routes.json
 
 import cats.effect.IO
-import io.circe.Decoder
 import org.http4s.EntityDecoder
 import PimpedCirce.jsonOf
 import io.dlinov.auth.domain.PaginatedResult
@@ -56,17 +55,12 @@ object EntityDecoders {
 
   implicit val documentToCreateEntityDecoder: EntityDecoder[IO, DocumentToCreate] = jsonOf[IO, DocumentToCreate]
 
-  def pageEntityDecoder[T](implicit dec: Decoder[T]): EntityDecoder[IO, PaginatedResult[T]] = {
-    implicit val tPageDecoder: Decoder[PaginatedResult[T]] = pageDecoder[T]
-    jsonOf[IO, PaginatedResult[T]]
-  }
-
   implicit val bouPageEntityDecoder: EntityDecoder[IO, PaginatedResult[BackOfficeUserToRead]] =
-    pageEntityDecoder[BackOfficeUserToRead]
+    jsonOf[IO, PaginatedResult[BackOfficeUserToRead]]
   implicit val buPageEntityDecoder: EntityDecoder[IO, PaginatedResult[BusinessUnitToRead]] =
-    pageEntityDecoder[BusinessUnitToRead]
+    jsonOf[IO, PaginatedResult[BusinessUnitToRead]]
   implicit val rolePageEntityDecoder: EntityDecoder[IO, PaginatedResult[RoleToRead]] =
-    pageEntityDecoder[RoleToRead]
+    jsonOf[IO, PaginatedResult[RoleToRead]]
   implicit val pToReadPageEntityDecoder: EntityDecoder[IO, PaginatedResult[PermissionToRead]] =
-    pageEntityDecoder[PermissionToRead]
+    jsonOf[IO, PaginatedResult[PermissionToRead]]
 }

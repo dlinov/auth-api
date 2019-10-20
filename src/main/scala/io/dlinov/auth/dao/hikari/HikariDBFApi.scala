@@ -92,6 +92,7 @@ object HikariDBFApi {
   implicit val pKeyRead: Read[PermissionKey] = Read[(Option[UUID], Option[UUID], Option[UUID])].map {
     case (_, Some(userId), _) ⇒ UserPermissionKey(userId)
     case (Some(buId), _, Some(roleId)) ⇒ BusinessUnitAndRolePermissionKey(buId, roleId)
+    case _ ⇒ throw new IllegalArgumentException("Row should be either user or business unit/role permission")
   }
 
   implicit val pKeyWrite: Write[PermissionKey] = Write[(Option[UUID], Option[UUID], Option[UUID])].contramap {

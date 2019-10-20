@@ -19,13 +19,14 @@ object PimpedCirce extends CirceInstances {
 
   final case class PimpedInvalidMessageBodyFailure(details: String, cause: Option[Throwable] = None)
     extends MessageBodyFailure {
-    def message: String = details
+    override def message: String = details
 
-    override def toHttpResponse[F[_]: Applicative](httpVersion: HttpVersion): F[Response[F]] = {
+    override def inHttpResponse[F[_]: Applicative, G[_]: Applicative](
+      httpVersion: HttpVersion): F[Response[G]] = {
       // TODO: pass id and params
       val apiError = ApiError(UUID.randomUUID(), ValidationFailed, message, None)
-      Response[F](Status.UnprocessableEntity, httpVersion)
-        .withEntity(apiError)(apiErrorEntityEncoder)
+      Response(Status.UnprocessableEntity, httpVersion)
+        .withEntity(apiError)(apiErrorEntityEncoder[G])
         .pure[F]
     }
   }

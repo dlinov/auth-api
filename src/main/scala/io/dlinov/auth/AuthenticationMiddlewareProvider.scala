@@ -41,7 +41,7 @@ trait AuthenticationMiddlewareProvider extends TokenExtractBehavior with Authent
     }
   })
 
-  private val onFailure: AuthedService[ServiceError, IO] = Kleisli(req ⇒ {
+  private val onFailure: AuthedRoutes[ServiceError, IO] = Kleisli(req ⇒ {
     val error = req.authInfo
     val id = error.id
     val code = error.code

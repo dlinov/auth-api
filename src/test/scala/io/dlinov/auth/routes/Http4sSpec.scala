@@ -12,6 +12,7 @@ import io.dlinov.auth.routes.dto.BackOfficeUserToCreate
 import io.dlinov.auth.util.Logging
 import monocle.macros.syntax.lens._
 import org.scalatest.{Status ⇒ _, _}
+import org.scalatest.wordspec.AnyWordSpecLike
 import io.dlinov.auth.routes.Http4sSpec.InitialData
 import io.dlinov.auth.dao.Dao.DaoResponse
 import io.dlinov.auth.{AppConfig, Bootable, TokenBehavior}
@@ -31,7 +32,7 @@ import scala.concurrent.ExecutionContext
 import scala.util.Random
 
 trait Http4sSpec
-  extends WordSpecLike with MustMatchers with OptionValues with BeforeAndAfterAll with Http4sSpecHelper
+  extends AnyWordSpecLike with MustMatchers with OptionValues with BeforeAndAfterAll with Http4sSpecHelper
   with Bootable with Logging {
 
   override protected implicit def contextShift: ContextShift[IO] = IO.contextShift(ExecutionContext.global)

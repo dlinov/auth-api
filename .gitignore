@@ -1,6 +1,7 @@
 logs
 target
 .bloop
+.hydra
 /.idea
 /.idea_modules
 /.classpath
