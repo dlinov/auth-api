@@ -21,18 +21,18 @@ trait TokenBehavior {
   }
 
   private def generateTokenInternal[T](
-    jwtCore: JwtCore[JwtHeader, JwtClaim])(
-    user: String,
-    payload: String): String = {
-    val header = JwtHeader(TokenBehavior.Algo, typ = "JWT")
-    val now = epochSecondsNow
+      jwtCore: JwtCore[JwtHeader, JwtClaim]
+  )(user: String, payload: String): String = {
+    val header     = JwtHeader(TokenBehavior.Algo, typ = "JWT")
+    val now        = epochSecondsNow
     val expiration = now + tokenExpirationInMinutes.minutes.toSeconds
     val claim = JwtClaim(
       content = payload,
       issuer = Some(Issuer),
       audience = Some(Set(user)),
       issuedAt = Some(now),
-      expiration = Some(expiration))
+      expiration = Some(expiration)
+    )
     jwtCore.encode(header, claim, TokenBehavior.AuthPrivateKey)
   }
 }
@@ -41,9 +41,9 @@ trait TokenBehavior {
 object TokenBehavior {
   // disable coverage to work around https://github.com/scoverage/scalac-scoverage-plugin/issues/125
   // $COVERAGE-OFF$
-  private final val Provider = "BC"
-  private final val AlgoString = "ECDSA"
-  private final val Issuer = "MYAPP"
+  final private val Provider   = "BC"
+  final private val AlgoString = "ECDSA"
+  final private val Issuer     = "MYAPP"
   // $COVERAGE-ON$
   private val Algo = JwtAlgorithm.ES256
 
@@ -51,24 +51,27 @@ object TokenBehavior {
     Security.addProvider(new BouncyCastleProvider())
   }
 
-  lazy final val AuthPublicKey: PublicKey = {
-    val key = scala.io.Source.fromResource("auth.key.pub").mkString
+  final lazy val AuthPublicKey: PublicKey = {
+    val key  = scala.io.Source.fromResource("auth.key.pub").mkString
     val spec = new X509EncodedKeySpec(parseKey(key))
     KeyFactory.getInstance(AlgoString, Provider).generatePublic(spec)
   }
 
   def epochSecondsNow: Long = Instant.now().getEpochSecond
 
-  private lazy final val AuthPrivateKey: PrivateKey = {
-    val key = scala.io.Source.fromResource("auth.key").mkString
+  final private lazy val AuthPrivateKey: PrivateKey = {
+    val key  = scala.io.Source.fromResource("auth.key").mkString
     val spec = new PKCS8EncodedKeySpec(parseKey(key))
     KeyFactory.getInstance(AlgoString, Provider).generatePrivate(spec)
   }
 
-  private def parseKey(key: String): Array[Byte] = JwtBase64.decodeNonSafe(
-    key.replaceAll("-----BEGIN (.*)-----", "")
-      .replaceAll("-----END (.*)-----", "")
-      .replaceAll("\r\n", "")
-      .replaceAll("\n", "")
-      .trim)
+  private def parseKey(key: String): Array[Byte] =
+    JwtBase64.decodeNonSafe(
+      key
+        .replaceAll("-----BEGIN (.*)-----", "")
+        .replaceAll("-----END (.*)-----", "")
+        .replaceAll("\r\n", "")
+        .replaceAll("\n", "")
+        .trim
+    )
 }

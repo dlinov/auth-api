@@ -1,11 +1,13 @@
 package io.dlinov.auth
 
 import cats.effect._
-import cats.implicits._
+import cats.syntax.functor._
 import org.http4s.server.blaze._
 
-object Boot extends IOApp with Bootable {
-  def run(args: List[String]): IO[ExitCode] =
+object CatsIOBoot extends IOApp with Bootable[IO] {
+  implicit override protected def ce: ConcurrentEffect[IO] = IO.ioConcurrentEffect
+
+  def run(args: List[String]): IO[ExitCode] = {
     BlazeServerBuilder[IO]
       .bindHttp(9000, "0.0.0.0")
       .withHttpApp(services)
@@ -13,5 +15,5 @@ object Boot extends IOApp with Bootable {
       .compile
       .drain
       .as(ExitCode.Success)
+  }
 }
-

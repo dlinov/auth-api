@@ -14,4 +14,5 @@ case class Permission(
     updatedBy: String,
     status: Int,
     createdTime: ZonedDateTime,
-    updatedTime: ZonedDateTime)
+    updatedTime: ZonedDateTime
+)

@@ -1,61 +1,95 @@
 package io.dlinov.auth.routes.json
 
-import cats.effect.IO
+import cats.Applicative
 import io.dlinov.auth.domain.auth.entities.{ClaimContent, Email}
 import io.dlinov.auth.routes.HealthCheckRoutes.HealthInfo
-import io.dlinov.auth.routes.dto.{ApiError, BackOfficeUserToCreate, BackOfficeUserToRead, BackOfficeUserToUpdate, BusinessUnitToCreate, BusinessUnitToRead, BusinessUnitToUpdate, CredentialsToRead, CredentialsToUpdate, LoginResponse, LoginStatusResponse, PasswordReset, PermissionToCreate, PermissionToRead, PermissionToUpdate, ResetPasswordLinkRequest, RoleToCreate, RoleToRead, RoleToUpdate, ScopeToCreate, ScopeToRead, ScopeToUpdate}
+import io.dlinov.auth.routes.dto.{
+  ApiError,
+  BackOfficeUserToCreate,
+  BackOfficeUserToRead,
+  BackOfficeUserToUpdate,
+  BusinessUnitToCreate,
+  BusinessUnitToRead,
+  BusinessUnitToUpdate,
+  CredentialsToRead,
+  CredentialsToUpdate,
+  LoginResponse,
+  LoginStatusResponse,
+  PasswordReset,
+  PermissionToCreate,
+  PermissionToRead,
+  PermissionToUpdate,
+  ResetPasswordLinkRequest,
+  RoleToCreate,
+  RoleToRead,
+  RoleToUpdate,
+  ScopeToCreate,
+  ScopeToRead,
+  ScopeToUpdate
+}
 import org.http4s.EntityEncoder
 import org.http4s.circe.jsonEncoderOf
 import io.dlinov.auth.domain.auth.entities.{ClaimContent, Email}
 import io.dlinov.auth.routes.HealthCheckRoutes.HealthInfo
 import io.dlinov.auth.routes.dto.{ResetPasswordLinkRequest, _}
 
-object EntityEncoders {
+trait EntityEncoders[F[_]] {
   import CirceEncoders._
 
-  implicit final val scopeToCreateEntityEncoder: EntityEncoder[IO, ScopeToCreate] = jsonEncoderOf[IO, ScopeToCreate]
-  implicit final val scopeToReadEntityEncoder: EntityEncoder[IO, ScopeToRead] = jsonEncoderOf[IO, ScopeToRead]
-  implicit final val scopeToUpdateEntityEncoder: EntityEncoder[IO, ScopeToUpdate] = jsonEncoderOf[IO, ScopeToUpdate]
-  implicit final val apiErrorEntityEncoder: EntityEncoder[IO, ApiError] = jsonEncoderOf[IO, ApiError]
+  implicit protected def applicativeF: Applicative[F]
 
-  implicit final val roleToCreateEntityEncoder: EntityEncoder[IO, RoleToCreate] = jsonEncoderOf[IO, RoleToCreate]
-  implicit final val roleToReadEntityEncoder: EntityEncoder[IO, RoleToRead] = jsonEncoderOf[IO, RoleToRead]
-  implicit final val roleToUpdateEntityEncoder: EntityEncoder[IO, RoleToUpdate] = jsonEncoderOf[IO, RoleToUpdate]
+  implicit final val scopeToCreateEntityEncoder: EntityEncoder[F, ScopeToCreate] =
+    jsonEncoderOf[F, ScopeToCreate]
+  implicit final val scopeToReadEntityEncoder: EntityEncoder[F, ScopeToRead] =
+    jsonEncoderOf[F, ScopeToRead]
+  implicit final val scopeToUpdateEntityEncoder: EntityEncoder[F, ScopeToUpdate] =
+    jsonEncoderOf[F, ScopeToUpdate]
+  implicit final val apiErrorEntityEncoder: EntityEncoder[F, ApiError] = jsonEncoderOf[F, ApiError]
 
-  implicit final val businessUnitToCreateEntityEncoder: EntityEncoder[IO, BusinessUnitToCreate] =
-    jsonEncoderOf[IO, BusinessUnitToCreate]
-  implicit final val businessUnitToReadEntityEncoder: EntityEncoder[IO, BusinessUnitToRead] =
-    jsonEncoderOf[IO, BusinessUnitToRead]
-  implicit final val businessUnitToUpdateEntityEncoder: EntityEncoder[IO, BusinessUnitToUpdate] =
-    jsonEncoderOf[IO, BusinessUnitToUpdate]
+  implicit final val roleToCreateEntityEncoder: EntityEncoder[F, RoleToCreate] =
+    jsonEncoderOf[F, RoleToCreate]
+  implicit final val roleToReadEntityEncoder: EntityEncoder[F, RoleToRead] =
+    jsonEncoderOf[F, RoleToRead]
+  implicit final val roleToUpdateEntityEncoder: EntityEncoder[F, RoleToUpdate] =
+    jsonEncoderOf[F, RoleToUpdate]
 
-  implicit final val permissionToCreateEntityEncoder: EntityEncoder[IO, PermissionToCreate] =
-    jsonEncoderOf[IO, PermissionToCreate]
-  implicit final val permissionToReadEntityEncoder: EntityEncoder[IO, PermissionToRead] =
-    jsonEncoderOf[IO, PermissionToRead]
-  implicit final val permissionToUpdateEntityEncoder: EntityEncoder[IO, PermissionToUpdate] =
-    jsonEncoderOf[IO, PermissionToUpdate]
+  implicit final val businessUnitToCreateEntityEncoder: EntityEncoder[F, BusinessUnitToCreate] =
+    jsonEncoderOf[F, BusinessUnitToCreate]
+  implicit final val businessUnitToReadEntityEncoder: EntityEncoder[F, BusinessUnitToRead] =
+    jsonEncoderOf[F, BusinessUnitToRead]
+  implicit final val businessUnitToUpdateEntityEncoder: EntityEncoder[F, BusinessUnitToUpdate] =
+    jsonEncoderOf[F, BusinessUnitToUpdate]
 
-  implicit final val backOfficeUserToCreateEntityEncoder: EntityEncoder[IO, BackOfficeUserToCreate] =
-    jsonEncoderOf[IO, BackOfficeUserToCreate]
-  implicit final val backOfficeUserToReadEntityEncoder: EntityEncoder[IO, BackOfficeUserToRead] =
-    jsonEncoderOf[IO, BackOfficeUserToRead]
-  implicit final val backOfficeUserToUpdateEntityEncoder: EntityEncoder[IO, BackOfficeUserToUpdate] =
-    jsonEncoderOf[IO, BackOfficeUserToUpdate]
+  implicit final val permissionToCreateEntityEncoder: EntityEncoder[F, PermissionToCreate] =
+    jsonEncoderOf[F, PermissionToCreate]
+  implicit final val permissionToReadEntityEncoder: EntityEncoder[F, PermissionToRead] =
+    jsonEncoderOf[F, PermissionToRead]
+  implicit final val permissionToUpdateEntityEncoder: EntityEncoder[F, PermissionToUpdate] =
+    jsonEncoderOf[F, PermissionToUpdate]
 
-  implicit final val emailEntityEncoder: EntityEncoder[IO, Email] = jsonEncoderOf[IO, Email]
-  implicit final val credentialsToReadEntityEncoder: EntityEncoder[IO, CredentialsToRead] =
-    jsonEncoderOf[IO, CredentialsToRead]
-  implicit final val credentialsToUpdateEntityEncoder: EntityEncoder[IO, CredentialsToUpdate] =
-    jsonEncoderOf[IO, CredentialsToUpdate]
-  implicit final val passwordResetEntityDecoder: EntityEncoder[IO, PasswordReset] =
-    jsonEncoderOf[IO, PasswordReset]
-  implicit final val passwordLinkRequestEntityEncoder: EntityEncoder[IO, ResetPasswordLinkRequest] =
-    jsonEncoderOf[IO, ResetPasswordLinkRequest]
+  implicit final val backOfficeUserToCreateEntityEncoder: EntityEncoder[F, BackOfficeUserToCreate] =
+    jsonEncoderOf[F, BackOfficeUserToCreate]
+  implicit final val backOfficeUserToReadEntityEncoder: EntityEncoder[F, BackOfficeUserToRead] =
+    jsonEncoderOf[F, BackOfficeUserToRead]
+  implicit final val backOfficeUserToUpdateEntityEncoder: EntityEncoder[F, BackOfficeUserToUpdate] =
+    jsonEncoderOf[F, BackOfficeUserToUpdate]
 
-  implicit final val claimContentEntityEncoder: EntityEncoder[IO, ClaimContent] = jsonEncoderOf[IO, ClaimContent]
-  implicit final val loginResponseEntityEncoder: EntityEncoder[IO, LoginResponse] = jsonEncoderOf[IO, LoginResponse]
-  implicit final val loginStatusResponseEntityEncoder: EntityEncoder[IO, LoginStatusResponse] =
-    jsonEncoderOf[IO, LoginStatusResponse]
-  implicit final val healthInfoEntityEncoder: EntityEncoder[IO, HealthInfo] = jsonEncoderOf[IO, HealthInfo]
+  implicit final val emailEntityEncoder: EntityEncoder[F, Email] = jsonEncoderOf[F, Email]
+  implicit final val credentialsToReadEntityEncoder: EntityEncoder[F, CredentialsToRead] =
+    jsonEncoderOf[F, CredentialsToRead]
+  implicit final val credentialsToUpdateEntityEncoder: EntityEncoder[F, CredentialsToUpdate] =
+    jsonEncoderOf[F, CredentialsToUpdate]
+  implicit final val passwordResetEntityEncoder: EntityEncoder[F, PasswordReset] =
+    jsonEncoderOf[F, PasswordReset]
+  implicit final val passwordLinkRequestEntityEncoder: EntityEncoder[F, ResetPasswordLinkRequest] =
+    jsonEncoderOf[F, ResetPasswordLinkRequest]
+
+  implicit final val claimContentEntityEncoder: EntityEncoder[F, ClaimContent] =
+    jsonEncoderOf[F, ClaimContent]
+  implicit final val loginResponseEntityEncoder: EntityEncoder[F, LoginResponse] =
+    jsonEncoderOf[F, LoginResponse]
+  implicit final val loginStatusResponseEntityEncoder: EntityEncoder[F, LoginStatusResponse] =
+    jsonEncoderOf[F, LoginStatusResponse]
+  implicit final val healthInfoEntityEncoder: EntityEncoder[F, HealthInfo] =
+    jsonEncoderOf[F, HealthInfo]
 }

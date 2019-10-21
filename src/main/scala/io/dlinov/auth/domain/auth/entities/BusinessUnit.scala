@@ -9,4 +9,5 @@ case class BusinessUnit(
     createdBy: String,
     updatedBy: String,
     createdTime: ZonedDateTime,
-    updatedTime: ZonedDateTime)
+    updatedTime: ZonedDateTime
+)

@@ -17,17 +17,24 @@ trait PasswordBehavior {
   protected val defaultPassword: String
 
   if (minPasswordLength < (nDigits + nUppercase + nSpecial)) {
-    throw new RuntimeException("configured password length is too short to comply with password strength rules")
+    throw new RuntimeException(
+      "configured password length is too short to comply with password strength rules"
+    )
   }
 
   def generatePassword: String = {
-    Random.shuffle((getNLowercase(minPasswordLength).drop(nDigits + nUppercase + nSpecial) +
-      getNDigits(nDigits) + getNUppercase(nUppercase) + getNSpecialCharacters(nSpecial)).toList).mkString
+    Random
+      .shuffle(
+        (getNLowercase(minPasswordLength).drop(nDigits + nUppercase + nSpecial) +
+          getNDigits(nDigits) + getNUppercase(nUppercase) + getNSpecialCharacters(nSpecial)).toList
+      )
+      .mkString
   }
 
   def validatePassword(
-    oldPassword: Option[String],
-    password: String): Either[NonEmptyList[String], String] = {
+      oldPassword: Option[String],
+      password: String
+  ): Either[NonEmptyList[String], String] = {
     Some(password) match {
       case `oldPassword` ⇒
         Left(NonEmptyList.one("New password cannot be the same as old password"))
@@ -72,7 +79,7 @@ trait PasswordBehavior {
     @tailrec def getNCharsInternal(nRemaining: Int, src: Seq[Char], acc: Seq[Char]): String = {
       if (nRemaining > 0) {
         val nextChar = src(Random.nextInt(src.size))
-        val nextSrc = if (duplicateCharAllowed) src else src.filterNot(_ == nextChar)
+        val nextSrc  = if (duplicateCharAllowed) src else src.filterNot(_ == nextChar)
         getNCharsInternal(nRemaining - 1, nextSrc, acc :+ nextChar)
       } else {
         acc.mkString
@@ -80,7 +87,9 @@ trait PasswordBehavior {
     }
 
     if (!duplicateCharAllowed && chars.size < n) {
-      throw new IllegalArgumentException(s"Char source has less elems than distinct elems requested")
+      throw new IllegalArgumentException(
+        s"Char source has less elems than distinct elems requested"
+      )
     }
     getNCharsInternal(n, chars, Seq.empty)
   }
@@ -103,22 +112,23 @@ trait PasswordBehavior {
 }
 
 object PasswordBehavior {
-  val MinPLength = "Minimum password length not satisfied"
-  val NotEnoughLowercase = "Not enough lowercase characters in the password"
-  val NotEnoughUppercase = "Not enough uppercase characters in the password"
+  val MinPLength            = "Minimum password length not satisfied"
+  val NotEnoughLowercase    = "Not enough lowercase characters in the password"
+  val NotEnoughUppercase    = "Not enough uppercase characters in the password"
   val NotEnoughSpecialChars = "Not enough special characters in the password"
-  val NotEnoughDigits = "Not enough numeric characters in the password"
-  val PEmpty = "Password cannot be null or empty"
+  val NotEnoughDigits       = "Not enough numeric characters in the password"
+  val PEmpty                = "Password cannot be null or empty"
 
-  private val digits = '0' to '9'
-  private val digitsSet = digits.toSet
-  private val lowercaseChars = 'a' to 'z'
+  private val digits            = '0' to '9'
+  private val digitsSet         = digits.toSet
+  private val lowercaseChars    = 'a' to 'z'
   private val lowercaseCharsSet = lowercaseChars.toSet
-  private val uppercaseChars = 'A' to 'Z'
+  private val uppercaseChars    = 'A' to 'Z'
   private val uppercaseCharsSet = uppercaseChars.toSet
   // I can't see any reasons to exclude, but originally there was none of these
   private val specialExcludedChars = Set('.', '\\', '|', '`', ',', '\'', ':')
   // "~!@#$%^&*()-_+=/[]{}<>?;\"".toCharArray
-  private val specialCharsSet = ('!' to '}').toSet.--(digitsSet.|(lowercaseCharsSet).|(uppercaseCharsSet).|(specialExcludedChars))
+  private val specialCharsSet = ('!' to '}').toSet
+    .--(digitsSet.|(lowercaseCharsSet).|(uppercaseCharsSet).|(specialExcludedChars))
   private val specialChars = specialCharsSet.toSeq
 }

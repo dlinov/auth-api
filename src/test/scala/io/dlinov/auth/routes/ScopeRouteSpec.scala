@@ -6,15 +6,13 @@ import cats.effect.IO
 import io.dlinov.auth.routes.dto.{ScopeToCreate, ScopeToRead, ScopeToUpdate}
 import org.http4s.Status
 import io.dlinov.auth.routes.dto.{ScopeToCreate, ScopeToRead, ScopeToUpdate}
-import io.dlinov.auth.routes.json.EntityDecoders.scopeToReadEntityDecoder
-import io.dlinov.auth.routes.json.EntityEncoders.{scopeToCreateEntityEncoder, scopeToUpdateEntityEncoder}
 
 class ScopeRouteSpec extends Http4sSpec {
 
   private val baseRoute = "/api/scopes"
 
   private var createdScope: ScopeToRead = _
-  private var scopeId: UUID = _
+  private var scopeId: UUID             = _
 
   "Scope routes" should {
 
@@ -23,7 +21,8 @@ class ScopeRouteSpec extends Http4sSpec {
       val request = buildPostRequest[ScopeToCreate](
         uri = baseRoute,
         entity = scopeToCreate,
-        token = initialData.superAdminToken)
+        token = initialData.superAdminToken
+      )
       val resp = services.run(request)
       check(resp, Status.UnprocessableEntity)
     }
@@ -33,7 +32,8 @@ class ScopeRouteSpec extends Http4sSpec {
       val request = buildPostRequest[ScopeToCreate](
         uri = baseRoute,
         entity = scopeToCreate,
-        token = initialData.superAdminToken)
+        token = initialData.superAdminToken
+      )
       val resp = services.run(request)
       check(resp, Status.UnprocessableEntity)
     }
@@ -43,17 +43,20 @@ class ScopeRouteSpec extends Http4sSpec {
       val request = buildPostRequest[ScopeToCreate](
         uri = baseRoute,
         entity = scopeToCreate,
-        token = initialData.superAdminToken)
+        token = initialData.superAdminToken
+      )
       val resp = services.run(request)
       check(resp, Status.UnprocessableEntity)
     }
 
     "fail to create new scope with too long description" in {
-      val scopeToCreate = ScopeToCreate(name = "scopetest", parentId = None, description = Some("x" * 256))
+      val scopeToCreate =
+        ScopeToCreate(name = "scopetest", parentId = None, description = Some("x" * 256))
       val request = buildPostRequest[ScopeToCreate](
         uri = baseRoute,
         entity = scopeToCreate,
-        token = initialData.superAdminToken)
+        token = initialData.superAdminToken
+      )
       val resp = services.run(request)
       check(resp, Status.UnprocessableEntity)
     }
@@ -63,7 +66,8 @@ class ScopeRouteSpec extends Http4sSpec {
       val request = buildPostRequest[ScopeToCreate](
         uri = baseRoute,
         entity = scopeToCreate,
-        token = initialData.superAdminToken)
+        token = initialData.superAdminToken
+      )
       val resp = services.run(request)
       check(resp, Status.InternalServerError) // probably BadRequest is better here
     }
@@ -73,7 +77,8 @@ class ScopeRouteSpec extends Http4sSpec {
       val request = buildPostRequest[ScopeToCreate](
         uri = baseRoute,
         entity = scopeToCreate,
-        token = initialData.superAdminToken)
+        token = initialData.superAdminToken
+      )
       val resp = services.run(request)
       check[ScopeToRead](resp, Status.Created, bu ⇒ {
         createdScope = bu
@@ -87,7 +92,8 @@ class ScopeRouteSpec extends Http4sSpec {
       val request = buildPostRequest[ScopeToCreate](
         uri = baseRoute,
         entity = scopeToCreate,
-        token = initialData.superAdminToken)
+        token = initialData.superAdminToken
+      )
       val resp = services.run(request)
       check[ScopeToRead](resp, Status.Created, bu ⇒ {
         bu.name mustBe scopeToCreate.name
@@ -96,9 +102,8 @@ class ScopeRouteSpec extends Http4sSpec {
     }
 
     "find scope by id" in {
-      val request = buildGetRequest(
-        uri = baseRoute + s"/$scopeId",
-        token = initialData.superAdminToken)
+      val request =
+        buildGetRequest(uri = baseRoute + s"/$scopeId", token = initialData.superAdminToken)
       val resp = services.run(request)
       check[ScopeToRead](resp, Status.Ok, r ⇒ {
         createdScope.name mustBe r.name
@@ -110,7 +115,8 @@ class ScopeRouteSpec extends Http4sSpec {
       val request = buildPutRequest[ScopeToUpdate](
         uri = baseRoute + s"/$scopeId",
         entity = scopeToUpdate,
-        token = initialData.superAdminToken)
+        token = initialData.superAdminToken
+      )
       val resp = services.run(request)
       check[ScopeToRead](resp, Status.Ok, r ⇒ {
         createdScope = r
@@ -120,11 +126,13 @@ class ScopeRouteSpec extends Http4sSpec {
 
     "delete scope by id" in {
       val resp = for {
-        request1 ← IO(buildDeleteRequest(uri = baseRoute + s"/$scopeId", token = initialData.superAdminToken))
+        request1 ← IO(
+          buildDeleteRequest(uri = baseRoute + s"/$scopeId", token = initialData.superAdminToken)
+        )
         _ ← services.run(request1)
-        request2 ← IO(buildGetRequest(
-          uri = baseRoute + s"/$scopeId",
-          token = initialData.superAdminToken))
+        request2 ← IO(
+          buildGetRequest(uri = baseRoute + s"/$scopeId", token = initialData.superAdminToken)
+        )
         resp2 ← services.run(request2)
       } yield resp2
       check(resp, Status.NotFound)

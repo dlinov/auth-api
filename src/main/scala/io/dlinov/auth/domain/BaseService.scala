@@ -12,10 +12,11 @@ trait BaseService extends Logging {
     ServiceError.unknownError(id, msg)
 
   protected def duplicateEntityError(
-    msg: String,
-    field: String,
-    value: String,
-    id: UUID = UUID.randomUUID()): ServiceError =
+      msg: String,
+      field: String,
+      value: String,
+      id: UUID = UUID.randomUUID()
+  ): ServiceError =
     ServiceError.duplicateEntityError(id, msg, field, value)
 
   protected def notFoundEntityError(msg: String, id: UUID = UUID.randomUUID()): ServiceError =

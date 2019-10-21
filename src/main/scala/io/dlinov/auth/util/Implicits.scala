@@ -10,7 +10,8 @@ object Implicits {
   }
 
   private val replaceAll = (arg: String) ⇒ {
-    arg.replace("""'""", "")
+    arg
+      .replace("""'""", "")
       .replace(""""""", "")
       .replace("""%27""", "")
       .replace("""\0""", "")

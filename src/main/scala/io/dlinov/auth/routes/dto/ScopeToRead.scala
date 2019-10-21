@@ -11,4 +11,5 @@ case class ScopeToRead(
     createdBy: String,
     updatedBy: String,
     createdTime: ZonedDateTime,
-    updatedTime: ZonedDateTime)
+    updatedTime: ZonedDateTime
+)

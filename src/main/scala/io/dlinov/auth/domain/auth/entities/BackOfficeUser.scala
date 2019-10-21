@@ -22,4 +22,5 @@ case class BackOfficeUser(
     createdBy: String,
     updatedBy: String,
     createdTime: ZonedDateTime,
-    updatedTime: ZonedDateTime)
+    updatedTime: ZonedDateTime
+)

@@ -61,11 +61,21 @@ object CustomerAttributes {
 
   case class Address(
       underlying: String,
-      country: Option[String] = None, postalCode: Option[String] = None, city: Option[String] = None,
-      municipality: Option[String] = None, district: Option[String] = None, province: Option[String] = None,
-      state: Option[String] = None, building: Option[String] = None, street: Option[String] = None,
-      village: Option[String] = None, room: Option[String] = None, lot: Option[String] = None,
-      block: Option[String] = None, houseNum: Option[String] = None) {
+      country: Option[String] = None,
+      postalCode: Option[String] = None,
+      city: Option[String] = None,
+      municipality: Option[String] = None,
+      district: Option[String] = None,
+      province: Option[String] = None,
+      state: Option[String] = None,
+      building: Option[String] = None,
+      street: Option[String] = None,
+      village: Option[String] = None,
+      room: Option[String] = None,
+      lot: Option[String] = None,
+      block: Option[String] = None,
+      houseNum: Option[String] = None
+  ) {
     assert(underlying.hasSomething)
     assert(underlying.matches("""[A-Za-z0-9]+[A-Za-z0-9\.\' ]*"""))
   }
@@ -86,4 +96,3 @@ object CustomerAttributes {
   }
 
 }
-

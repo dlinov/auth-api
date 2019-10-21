@@ -4,39 +4,39 @@ import java.time.ZonedDateTime
 import java.util.UUID
 
 import cats.data.OptionT
+import cats.effect.Effect
+import cats.syntax.either._
+import cats.syntax.flatMap._
+import cats.syntax.functor._
 import doobie._
 import doobie.implicits._
 import io.dlinov.auth.dao.Dao.DaoResponse
 import io.dlinov.auth.dao.DBFApi
 import io.dlinov.auth.dao.generic.ScopeFDao
-import cats.effect.IO
-import cats.syntax.either._
-import io.dlinov.auth.dao.DBFApi
-import io.dlinov.auth.dao.generic.ScopeFDao
 import io.dlinov.auth.domain.PaginatedResult
 import io.dlinov.auth.domain.auth.entities.Scope
 import io.dlinov.auth.domain.PaginatedResult
 import io.dlinov.auth.domain.auth.entities.Scope
 
-class ScopeHikariDao(db: DBFApi[IO])
-  extends ScopeFDao {
+class ScopeHikariDao[F[_]: Effect](db: DBFApi[F]) extends ScopeFDao[F] {
 
   import HikariDBFApi._
   import ScopeHikariDao._
 
   override def create(
-    name: String,
-    parentId: Option[UUID],
-    description: Option[String],
-    createdBy: String,
-    reactivate: Boolean): IO[DaoResponse[Scope]] = {
+      name: String,
+      parentId: Option[UUID],
+      description: Option[String],
+      createdBy: String,
+      reactivate: Boolean
+  ): F[DaoResponse[Scope]] = {
     for {
       xa ← db.transactor
       result ← (if (reactivate) {
-        reactivateInternal(parentId, name, description, createdBy)
-      } else {
-        createInternal(parentId, name, description, createdBy)
-      }).transact(xa).attempt
+                  reactivateInternal(parentId, name, description, createdBy)
+                } else {
+                  createInternal(parentId, name, description, createdBy)
+                }).transact(xa).attemptSql
     } yield result.leftMap { exc ⇒
       val msg = s"Unexpected error in .create($name,..): " + exc.getMessage
       logger.warn(msg, exc)
@@ -44,10 +44,10 @@ class ScopeHikariDao(db: DBFApi[IO])
     }
   }
 
-  override def findById(id: UUID): IO[DaoResponse[Option[Scope]]] = {
+  override def findById(id: UUID): F[DaoResponse[Option[Scope]]] = {
     for {
-      xa ← db.transactor
-      result ← findByIdInternal(id).transact(xa).attempt
+      xa     ← db.transactor
+      result ← findByIdInternal(id).transact(xa).attemptSql
     } yield result.leftMap { exc ⇒
       val msg = s"Unexpected error in .findById($id): " + exc.getMessage
       logger.warn(msg, exc)
@@ -56,11 +56,12 @@ class ScopeHikariDao(db: DBFApi[IO])
   }
 
   override def findAll(
-    maybeLimit: Option[Int],
-    maybeOffset: Option[Int]): IO[DaoResponse[PaginatedResult[Scope]]] = {
+      maybeLimit: Option[Int],
+      maybeOffset: Option[Int]
+  ): F[DaoResponse[PaginatedResult[Scope]]] = {
     for {
-      xa ← db.transactor
-      result ← findAllInternal(maybeLimit, maybeOffset).transact(xa).attempt
+      xa     ← db.transactor
+      result ← findAllInternal(maybeLimit, maybeOffset).transact(xa).attemptSql
     } yield result.leftMap { exc ⇒
       val msg = s"Unexpected error in .findAll: " + exc.getMessage
       logger.warn(msg, exc)
@@ -69,12 +70,13 @@ class ScopeHikariDao(db: DBFApi[IO])
   }
 
   override def update(
-    id: UUID,
-    description: Option[String],
-    updatedBy: String): IO[DaoResponse[Option[Scope]]] = {
+      id: UUID,
+      description: Option[String],
+      updatedBy: String
+  ): F[DaoResponse[Option[Scope]]] = {
     for {
-      xa ← db.transactor
-      maybeUpdatedScopeOrError ← updateInternal(id, description, updatedBy).transact(xa).attempt
+      xa                       ← db.transactor
+      maybeUpdatedScopeOrError ← updateInternal(id, description, updatedBy).transact(xa).attemptSql
     } yield maybeUpdatedScopeOrError.leftMap { exc ⇒
       val msg = s"Unexpected error in .update($id,..): " + exc.getMessage
       logger.warn(msg, exc)
@@ -82,11 +84,11 @@ class ScopeHikariDao(db: DBFApi[IO])
     }
   }
 
-  override def remove(id: UUID, updatedBy: String): IO[DaoResponse[Option[UUID]]] = {
+  override def remove(id: UUID, updatedBy: String): F[DaoResponse[Option[UUID]]] = {
     (for {
-      xa ← db.transactor
+      xa      ← db.transactor
       maybeId ← removeInternal(id, updatedBy).transact(xa)
-    } yield maybeId).attempt.map(_.leftMap { exc ⇒
+    } yield maybeId).attemptSql.map(_.leftMap { exc ⇒
       val msg = s"Unexpected error in .update($id,..): " + exc.getMessage
       logger.warn(msg, exc)
       genericDbError(msg)
@@ -94,29 +96,31 @@ class ScopeHikariDao(db: DBFApi[IO])
   }
 
   private[hikari] def createInternal(
-    parentId: Option[UUID],
-    name: String,
-    description: Option[String],
-    createdBy: String): ConnectionIO[Scope] = {
+      parentId: Option[UUID],
+      name: String,
+      description: Option[String],
+      createdBy: String
+  ): ConnectionIO[Scope] = {
     val id = UUID.randomUUID()
     for {
-      _ ← insertQuery(id, parentId, name, description, createdBy).update.run
+      _          ← insertQuery(id, parentId, name, description, createdBy).update.run
       maybeScope ← fetchByIdInternal(id)
     } yield maybeScope
   }
 
   private[hikari] def reactivateInternal(
-    parentId: Option[UUID],
-    name: String,
-    description: Option[String],
-    createdBy: String): ConnectionIO[Scope] = {
+      parentId: Option[UUID],
+      name: String,
+      description: Option[String],
+      createdBy: String
+  ): ConnectionIO[Scope] = {
     for {
       maybeExistingScope ← findByNameInternal(name)
       upsertedScope ← maybeExistingScope.fold {
         createInternal(parentId, name, description, createdBy)
       } { _ ⇒
         for {
-          _ ← reactivateQuery(parentId, name, description, createdBy).update.run
+          _                ← reactivateQuery(parentId, name, description, createdBy).update.run
           reactivatedScope ← fetchByNameInternal(name)
         } yield reactivatedScope
       }
@@ -148,34 +152,39 @@ class ScopeHikariDao(db: DBFApi[IO])
   }
 
   private[hikari] def findAllInternal(
-    maybeLimit: Option[Int],
-    maybeOffset: Option[Int]): ConnectionIO[PaginatedResult[Scope]] = {
+      maybeLimit: Option[Int],
+      maybeOffset: Option[Int]
+  ): ConnectionIO[PaginatedResult[Scope]] = {
     for {
       page ← queryAll(maybeLimit, maybeOffset)
         .query[Scope]
         .to[List]
       total ← countAll.query[Int].unique
-    } yield PaginatedResult(total, page, maybeLimit.getOrElse(Int.MaxValue), maybeOffset.getOrElse(0))
+    } yield PaginatedResult(
+      total,
+      page,
+      maybeLimit.getOrElse(Int.MaxValue),
+      maybeOffset.getOrElse(0)
+    )
   }
 
   private[hikari] def updateInternal(
-    id: UUID,
-    description: Option[String],
-    updatedBy: String): ConnectionIO[Option[Scope]] = {
+      id: UUID,
+      description: Option[String],
+      updatedBy: String
+  ): ConnectionIO[Option[Scope]] = {
     for {
-      _ ← updateQuery(id, description, updatedBy).update.run
+      _          ← updateQuery(id, description, updatedBy).update.run
       maybeScope ← findByIdInternal(id)
     } yield maybeScope
   }
 
-  private[hikari] def removeInternal(
-    id: UUID,
-    updatedBy: String): ConnectionIO[Option[UUID]] = {
+  private[hikari] def removeInternal(id: UUID, updatedBy: String): ConnectionIO[Option[UUID]] = {
     val uTime = nowUTC
     (for {
       existingScope ← OptionT(findByIdInternal(id))
-      _ ← OptionT.liftF(PermissionHikariDao.deleteByScopeId(id, updatedBy, uTime).update.run)
-      _ ← OptionT.liftF(deleteQuery(id, updatedBy, uTime).update.run)
+      _             ← OptionT.liftF(PermissionHikariDao.deleteByScopeId(id, updatedBy, uTime).update.run)
+      _             ← OptionT.liftF(deleteQuery(id, updatedBy, uTime).update.run)
     } yield existingScope.id).value
   }
 }
@@ -186,7 +195,9 @@ object ScopeHikariDao {
   val TableName: Fragment = Fragment.const("scopes")
 
   private val SelectFromTable: Fragment =
-    Fragment.const("SELECT `id`, `parentId`, `name`, `description`, `cBy`, `uBy`, `cDate`, `uDate` FROM") ++ TableName
+    Fragment.const(
+      "SELECT `id`, `parentId`, `name`, `description`, `cBy`, `uBy`, `cDate`, `uDate` FROM"
+    ) ++ TableName
 
   private val SelectCountFromTable: Fragment =
     Fragment.const("SELECT COUNT(`id`) FROM") ++ TableName
@@ -207,7 +218,7 @@ object ScopeHikariDao {
   private def queryByName(name: String): Fragment = SelectFromTable ++ whereByNameAndActive(name)
 
   private def queryAll(maybeLimit: Option[Int], maybeOffset: Option[Int]): Fragment = {
-    val limit = maybeLimit.fold(EmptyFragment)(lmt ⇒ fr"LIMIT $lmt")
+    val limit  = maybeLimit.fold(EmptyFragment)(lmt ⇒ fr"LIMIT $lmt")
     val offset = maybeOffset.fold(EmptyFragment)(off ⇒ fr"OFFSET $off")
     SelectFromTable ++ fr"WHERE status = 1" ++ limit ++ offset
   }
@@ -215,34 +226,32 @@ object ScopeHikariDao {
   private def countAll: Fragment = SelectCountFromTable ++ whereActive
 
   private def insertQuery(
-    id: UUID,
-    parentId: Option[UUID],
-    name: String,
-    description: Option[String],
-    createdBy: String): Fragment = {
+      id: UUID,
+      parentId: Option[UUID],
+      name: String,
+      description: Option[String],
+      createdBy: String
+  ): Fragment = {
     InsertIntoTable ++ fr"($id, $parentId, $name, $description, $createdBy, $createdBy);"
   }
 
   private def reactivateQuery(
-    parentId: Option[UUID],
-    name: String,
-    description: Option[String],
-    createdBy: String): Fragment = {
+      parentId: Option[UUID],
+      name: String,
+      description: Option[String],
+      createdBy: String
+  ): Fragment = {
     UpdateTable ++ fr"SET `parentId` = $parentId, `description` = $description, uBy = $createdBy" ++
       whereByNameAndActive(name)
   }
 
-  private def updateQuery(
-    id: UUID,
-    description: Option[String],
-    updatedBy: String): Fragment = {
+  private def updateQuery(id: UUID, description: Option[String], updatedBy: String): Fragment = {
     UpdateTable ++ fr"SET `description` = $description, uBy = $updatedBy" ++ whereByIdAndActive(id)
   }
 
-  private def deleteQuery(
-    id: UUID,
-    updatedBy: String,
-    updatedAt: ZonedDateTime): Fragment = {
-    UpdateTable ++ fr"SET status = 0, uBy = $updatedBy, uDate = $updatedAt" ++ whereByIdAndActive(id)
+  private def deleteQuery(id: UUID, updatedBy: String, updatedAt: ZonedDateTime): Fragment = {
+    UpdateTable ++ fr"SET status = 0, uBy = $updatedBy, uDate = $updatedAt" ++ whereByIdAndActive(
+      id
+    )
   }
 }

@@ -18,7 +18,8 @@ import scala.util.Try
 trait AuthenticationBehavior {
   import AuthenticationBehavior._
 
-  protected def notAuthorized: String ⇒ ServiceError = ServiceError.notAuthorizedError(UUID.randomUUID(), _)
+  protected def notAuthorized: String ⇒ ServiceError =
+    ServiceError.notAuthorizedError(UUID.randomUUID(), _)
 
   protected def decodeClaim(rawToken: String): Try[JwtClaim] = {
     JwtCirce.decode(rawToken, publicKey, algorithms)
@@ -30,7 +31,8 @@ trait AuthenticationBehavior {
       claim ← decodeClaim(rawToken).toEither
         .leftMap(e ⇒ notAuthorized(e.getMessage))
       jsonContent ← parse(claim.content).leftMap(f ⇒ notAuthorized(f.message))
-      userClaim ← jsonContent.as[ClaimContent]
+      userClaim ← jsonContent
+        .as[ClaimContent]
         .leftMap(e ⇒ notAuthorized(e.getMessage))
     } yield userClaim
   }
@@ -42,13 +44,14 @@ trait AuthenticationBehavior {
         .leftMap(e ⇒ notAuthorized(e.getMessage))
       jsonContent ← parse(claim.content)
         .leftMap(e ⇒ notAuthorized(e.getMessage))
-      passwordResetClaim ← jsonContent.as[PasswordResetClaim]
+      passwordResetClaim ← jsonContent
+        .as[PasswordResetClaim]
         .leftMap(e ⇒ notAuthorized(e.getMessage))
     } yield passwordResetClaim
   }
 }
 
 object AuthenticationBehavior {
-  private val publicKey: String = scala.io.Source.fromResource("auth.key.pub").mkString
+  private val publicKey: String                       = scala.io.Source.fromResource("auth.key.pub").mkString
   private val algorithms: Seq[JwtAsymmetricAlgorithm] = Seq(JwtAlgorithm.ES256)
 }

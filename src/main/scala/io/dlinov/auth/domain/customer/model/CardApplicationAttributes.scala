@@ -25,7 +25,8 @@ object CardApplicationAttributes {
   case class NewCardApplicationDetails(
       nameOnCard: NameAttribute,
       cardPin: CardPin,
-      deliveryAddress: Address)
+      deliveryAddress: Address
+  )
 
   case class CardApplicationStatus(underlying: String) {
     assert(underlying.hasSomething)
@@ -39,6 +40,6 @@ object CardApplicationAttributes {
       nameOnCard: NameAttribute,
       cardPin: CardPin,
       deliveryAddress: Address,
-      status: CardApplicationStatus)
+      status: CardApplicationStatus
+  )
 }
-

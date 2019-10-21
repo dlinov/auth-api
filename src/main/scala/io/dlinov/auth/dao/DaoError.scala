@@ -10,9 +10,10 @@ sealed trait DaoError {
 }
 
 object DaoError {
-  final case class GenericDbError(message: String) extends DaoError
+  final case class GenericDbError(message: String)           extends DaoError
   final case class ConstraintViolationError(message: String) extends DaoError
-  final case class EntityAlreadyExistsError(message: String, field: String, value: String) extends DaoError
+  final case class EntityAlreadyExistsError(message: String, field: String, value: String)
+      extends DaoError
   final case class EntityNotFoundError(message: String) extends DaoError
-  final case class WrongCredentials(message: String) extends DaoError
+  final case class WrongCredentials(message: String)    extends DaoError
 }

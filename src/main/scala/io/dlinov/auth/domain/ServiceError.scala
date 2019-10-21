@@ -3,14 +3,20 @@ package io.dlinov.auth.domain
 import java.util.UUID
 
 import io.dlinov.auth.dao.DaoError
-import io.dlinov.auth.dao.DaoError.{ConstraintViolationError, EntityAlreadyExistsError, EntityNotFoundError, WrongCredentials}
+import io.dlinov.auth.dao.DaoError.{
+  ConstraintViolationError,
+  EntityAlreadyExistsError,
+  EntityNotFoundError,
+  WrongCredentials
+}
 
 case class ServiceError(
     id: UUID,
     code: ErrorCode,
     message: String,
     fieldName: Option[String] = None,
-    fieldValue: Option[String] = None) {
+    fieldValue: Option[String] = None
+) {
 
   override def toString: String = s"$message ($id)"
 }
@@ -51,10 +57,11 @@ object ServiceError {
     ServiceError(id, ErrorCodes.Unknown, message)
 
   def fromDaoError: DaoError ⇒ ServiceError = {
-    case err: EntityAlreadyExistsError ⇒ duplicateEntityError(err.id, err.message, err.field, err.value)
-    case err: EntityNotFoundError ⇒ notFoundEntityError(err.id, err.message)
+    case err: EntityAlreadyExistsError ⇒
+      duplicateEntityError(err.id, err.message, err.field, err.value)
+    case err: EntityNotFoundError      ⇒ notFoundEntityError(err.id, err.message)
     case err: ConstraintViolationError ⇒ validationError(err.id, err.message)
-    case err: WrongCredentials ⇒ notAuthorizedError(err.id, err.message)
-    case e ⇒ unknownError(e.id, e.message)
+    case err: WrongCredentials         ⇒ notAuthorizedError(err.id, err.message)
+    case e                             ⇒ unknownError(e.id, e.message)
   }
 }

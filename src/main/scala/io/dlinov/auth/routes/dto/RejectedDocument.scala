@@ -12,13 +12,16 @@ case class RejectedDocument(
     /*@ApiModelProperty(name = "document_id", required = true) */ documentId: UUID,
     /*@ApiModelProperty(name = "customer_id", required = true) */ customerId: UUID,
     /*@ApiModelProperty(name = "document_type", required = true) */ documentType: String,
-    /*@ApiModelProperty(name = "document_type_identifier", required = false) */ documentTypeIdentifier: Option[String],
+    /*@ApiModelProperty(name = "document_type_identifier", required = false) */ documentTypeIdentifier: Option[
+      String
+    ],
     /*@ApiModelProperty(name = "purpose", required = true) */ purpose: String,
     /*@ApiModelProperty(name = "created_at", required = true) */ createdAt: ZonedDateTime,
     /*@ApiModelProperty(name = "created_by", required = true) */ createdBy: String,
     /*@ApiModelProperty(name = "reason_if_rejected", required = true) */ rejectionReason: String,
     /*@ApiModelProperty(name = "rejected_at", required = true) */ rejectedAt: ZonedDateTime,
-    /*@ApiModelProperty(name = "rejected_by", required = true) */ rejectedBy: String)
+    /*@ApiModelProperty(name = "rejected_by", required = true) */ rejectedBy: String
+)
 
 object RejectedDocument {
   val empty = new RejectedDocument(
@@ -31,5 +34,6 @@ object RejectedDocument {
     createdBy = "",
     rejectionReason = "",
     rejectedAt = Constants.MinDateTime,
-    rejectedBy = "")
+    rejectedBy = ""
+  )
 }

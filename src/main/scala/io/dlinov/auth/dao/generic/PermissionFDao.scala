@@ -2,7 +2,6 @@ package io.dlinov.auth.dao.generic
 
 import java.util.UUID
 
-import cats.effect.IO
 import io.dlinov.auth.dao.Dao
 import io.dlinov.auth.domain.PaginatedResult
 import io.dlinov.auth.domain.auth.entities.Permission
@@ -13,29 +12,32 @@ import io.dlinov.auth.dao.Dao
 import io.dlinov.auth.domain.PaginatedResult
 import io.dlinov.auth.routes.dto.PermissionKey
 
-trait PermissionFDao extends Dao {
+trait PermissionFDao[F[_]] extends Dao {
 
   def create(
-    pKey: PermissionKey,
-    scopeId: EntityId,
-    revoke: Boolean,
-    createdBy: String,
-    reactivate: Boolean): IO[DaoResponse[Permission]]
+      pKey: PermissionKey,
+      scopeId: EntityId,
+      revoke: Boolean,
+      createdBy: String,
+      reactivate: Boolean
+  ): F[DaoResponse[Permission]]
 
-  def findById(id: UUID): IO[DaoResponse[Option[Permission]]]
+  def findById(id: UUID): F[DaoResponse[Option[Permission]]]
 
   def findAndMerge(
-    businessUnitId: UUID,
-    roleId: UUID,
-    maybeUserId: Option[UUID],
-    maybeLimit: Option[Int],
-    maybeOffset: Option[Int]): IO[DaoResponse[PaginatedResult[Permission]]]
+      businessUnitId: UUID,
+      roleId: UUID,
+      maybeUserId: Option[UUID],
+      maybeLimit: Option[Int],
+      maybeOffset: Option[Int]
+  ): F[DaoResponse[PaginatedResult[Permission]]]
 
   def update(
-    id: EntityId,
-    mbPermissionKey: Option[PermissionKey],
-    mbScopeId: Option[UUID],
-    updatedBy: String): IO[DaoResponse[Option[Permission]]]
+      id: EntityId,
+      mbPermissionKey: Option[PermissionKey],
+      mbScopeId: Option[UUID],
+      updatedBy: String
+  ): F[DaoResponse[Option[Permission]]]
 
-  def remove(id: EntityId, updatedBy: String): IO[DaoResponse[Option[Permission]]]
+  def remove(id: EntityId, updatedBy: String): F[DaoResponse[Option[Permission]]]
 }

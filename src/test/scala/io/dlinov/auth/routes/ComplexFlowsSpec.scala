@@ -3,31 +3,49 @@ package io.dlinov.auth.routes
 import java.util.UUID
 
 import cats.effect.IO
-import io.circe.{Json, parser}
+import io.circe.{parser, Json}
 import io.dlinov.auth.domain.PaginatedResult
 import io.dlinov.auth.domain.auth.entities.Email
-import io.dlinov.auth.routes.dto.{BackOfficeUserToCreate, BackOfficeUserToRead, BackOfficeUserToUpdate, BusinessUnitToCreate, BusinessUnitToRead, BusinessUnitToUpdate, RoleToCreate, RoleToRead, RoleToUpdate}
+import io.dlinov.auth.routes.dto.{
+  BackOfficeUserToCreate,
+  BackOfficeUserToRead,
+  BackOfficeUserToUpdate,
+  BusinessUnitToCreate,
+  BusinessUnitToRead,
+  BusinessUnitToUpdate,
+  RoleToCreate,
+  RoleToRead,
+  RoleToUpdate
+}
 import org.http4s.Status
 import org.http4s.circe.jsonEncoder
 import io.dlinov.auth.domain.PaginatedResult
 import io.dlinov.auth.domain.auth.entities.Email
-import io.dlinov.auth.routes.dto.{BackOfficeUserToCreate, BackOfficeUserToRead, BackOfficeUserToUpdate, BusinessUnitToCreate, BusinessUnitToRead, BusinessUnitToUpdate, RoleToCreate, RoleToRead, RoleToUpdate}
-import io.dlinov.auth.routes.json.EntityDecoders._
-import io.dlinov.auth.routes.json.EntityEncoders._
+import io.dlinov.auth.routes.dto.{
+  BackOfficeUserToCreate,
+  BackOfficeUserToRead,
+  BackOfficeUserToUpdate,
+  BusinessUnitToCreate,
+  BusinessUnitToRead,
+  BusinessUnitToUpdate,
+  RoleToCreate,
+  RoleToRead,
+  RoleToUpdate
+}
 
 class ComplexFlowsSpec extends Http4sSpec {
 
-  private val buRoute = "/api/business_units"
+  private val buRoute    = "/api/business_units"
   private val rolesRoute = "/api/roles"
-  private val bouRoute = "/api/back_office_users"
-  private val emptyUuid = new UUID(0L, 0L)
+  private val bouRoute   = "/api/back_office_users"
+  private val emptyUuid  = new UUID(0L, 0L)
 
   private var createdBusinessUnit: BusinessUnitToRead = _
-  private var buId: UUID = _
-  private var createdRole: RoleToRead = _
-  private var rId: UUID = _
-  private var userId: UUID = _
-  private var createdUser: BackOfficeUserToRead = _
+  private var buId: UUID                              = _
+  private var createdRole: RoleToRead                 = _
+  private var rId: UUID                               = _
+  private var userId: UUID                            = _
+  private var createdUser: BackOfficeUserToRead       = _
 
   "BackOfficeUser routes pt. I" should {
     "fail to create new backoffice user with non-existing business unit id" in {
@@ -43,11 +61,13 @@ class ComplexFlowsSpec extends Http4sSpec {
         activeLanguage = None,
         customData = None,
         roleId = initialData.defaultRoleId,
-        businessUnitId = emptyUuid)
+        businessUnitId = emptyUuid
+      )
       val request = buildPostRequest[BackOfficeUserToCreate](
         uri = bouRoute,
         entity = userToCreate,
-        token = initialData.superAdminToken)
+        token = initialData.superAdminToken
+      )
       val resp = services.run(request)
       check(resp, Status.NotFound)
     }
@@ -65,11 +85,13 @@ class ComplexFlowsSpec extends Http4sSpec {
         activeLanguage = None,
         customData = None,
         roleId = initialData.defaultRoleId,
-        businessUnitId = emptyUuid)
+        businessUnitId = emptyUuid
+      )
       val request = buildPostRequest[BackOfficeUserToCreate](
         uri = bouRoute,
         entity = userToCreate,
-        token = initialData.superAdminToken)
+        token = initialData.superAdminToken
+      )
       val resp = services.run(request)
       check(resp, Status.NotFound)
     }
@@ -81,7 +103,8 @@ class ComplexFlowsSpec extends Http4sSpec {
       val request = buildPostRequest[BusinessUnitToCreate](
         uri = buRoute,
         entity = buToCreate,
-        token = initialData.superAdminToken)
+        token = initialData.superAdminToken
+      )
       val resp = services.run(request)
       check(resp, Status.UnprocessableEntity)
     }
@@ -91,7 +114,8 @@ class ComplexFlowsSpec extends Http4sSpec {
       val request = buildPostRequest[BusinessUnitToCreate](
         uri = buRoute,
         entity = buToCreate,
-        token = initialData.superAdminToken)
+        token = initialData.superAdminToken
+      )
       val resp = services.run(request)
       check(resp, Status.UnprocessableEntity)
     }
@@ -101,7 +125,8 @@ class ComplexFlowsSpec extends Http4sSpec {
       val request = buildPostRequest[BusinessUnitToCreate](
         uri = buRoute,
         entity = buToCreate,
-        token = initialData.superAdminToken)
+        token = initialData.superAdminToken
+      )
       val resp = services.run(request)
       check[BusinessUnitToRead](resp, Status.Created, bu ⇒ {
         createdBusinessUnit = bu
@@ -111,20 +136,16 @@ class ComplexFlowsSpec extends Http4sSpec {
     }
 
     "find business unit by id" in {
-      val request = buildGetRequest(
-        uri = buRoute + s"/$buId",
-        token = initialData.superAdminToken)
-      val resp = services.run(request)
+      val request = buildGetRequest(uri = buRoute + s"/$buId", token = initialData.superAdminToken)
+      val resp    = services.run(request)
       check[BusinessUnitToRead](resp, Status.Ok, bu ⇒ {
         createdBusinessUnit.name mustBe bu.name
       })
     }
 
     "find all business units" in {
-      val request = buildGetRequest(
-        uri = buRoute,
-        token = initialData.superAdminToken)
-      val resp = services.run(request)
+      val request = buildGetRequest(uri = buRoute, token = initialData.superAdminToken)
+      val resp    = services.run(request)
       check[PaginatedResult[BusinessUnitToRead]](resp, Status.Ok, page ⇒ {
         val bUnits = page.results
         bUnits.size mustBe page.total
@@ -137,7 +158,8 @@ class ComplexFlowsSpec extends Http4sSpec {
       val request = buildPutRequest[BusinessUnitToUpdate](
         uri = buRoute + s"/$buId",
         entity = buToUpdate,
-        token = initialData.superAdminToken)
+        token = initialData.superAdminToken
+      )
       val resp = services.run(request)
       check[BusinessUnitToRead](resp, Status.Ok, bu ⇒ {
         createdBusinessUnit = bu
@@ -152,7 +174,8 @@ class ComplexFlowsSpec extends Http4sSpec {
       val request = buildPostRequest[RoleToCreate](
         uri = rolesRoute,
         entity = roleToCreate,
-        token = initialData.superAdminToken)
+        token = initialData.superAdminToken
+      )
       val resp = services.run(request)
       check(resp, Status.UnprocessableEntity)
     }
@@ -162,7 +185,8 @@ class ComplexFlowsSpec extends Http4sSpec {
       val request = buildPostRequest[RoleToCreate](
         uri = rolesRoute,
         entity = roleToCreate,
-        token = initialData.superAdminToken)
+        token = initialData.superAdminToken
+      )
       val resp = services.run(request)
       check(resp, Status.UnprocessableEntity)
     }
@@ -172,7 +196,8 @@ class ComplexFlowsSpec extends Http4sSpec {
       val request = buildPostRequest[RoleToCreate](
         uri = rolesRoute,
         entity = roleToCreate,
-        token = initialData.superAdminToken)
+        token = initialData.superAdminToken
+      )
       val resp = services.run(request)
       check[RoleToRead](resp, Status.Created, bu ⇒ {
         createdRole = bu
@@ -182,9 +207,8 @@ class ComplexFlowsSpec extends Http4sSpec {
     }
 
     "find role by id" in {
-      val request = buildGetRequest(
-        uri = rolesRoute + s"/$rId",
-        token = initialData.superAdminToken)
+      val request =
+        buildGetRequest(uri = rolesRoute + s"/$rId", token = initialData.superAdminToken)
       val resp = services.run(request)
       check[RoleToRead](resp, Status.Ok, r ⇒ {
         createdRole.name mustBe r.name
@@ -192,10 +216,8 @@ class ComplexFlowsSpec extends Http4sSpec {
     }
 
     "find all roles" in {
-      val request = buildGetRequest(
-        uri = rolesRoute,
-        token = initialData.superAdminToken)
-      val resp = services.run(request)
+      val request = buildGetRequest(uri = rolesRoute, token = initialData.superAdminToken)
+      val resp    = services.run(request)
       check[PaginatedResult[RoleToRead]](resp, Status.Ok, page ⇒ {
         val roles = page.results
         roles.exists(_.name == createdRole.name) mustBe true
@@ -207,7 +229,8 @@ class ComplexFlowsSpec extends Http4sSpec {
       val request = buildPutRequest[RoleToUpdate](
         uri = rolesRoute + s"/$rId",
         entity = roleToUpdate,
-        token = initialData.superAdminToken)
+        token = initialData.superAdminToken
+      )
       val resp = services.run(request)
       check[RoleToRead](resp, Status.Ok, r ⇒ {
         createdRole = r
@@ -218,12 +241,13 @@ class ComplexFlowsSpec extends Http4sSpec {
 
   "BackOfficeUser routes pt. II" should {
     "fail to create new backoffice user when name is invalid" in {
-      val json = parser.parse(s"""{"role":"$rId","business_unit":"$buId","first_name":"Daniel","user_name":"daniel,icardo","last_name":"Icardo","manual_user_name":"daniel.icardo","phone_number":"971787878782","email":"d.icardo@foo.bar","business_unit_id":"09864604-2caf-4b3f-a79c-c841105f580b","role_id":"12ec03f3-d1dc-11e8-bcd3-000c291e73b1"}""")
+      val json = parser
+        .parse(
+          s"""{"role":"$rId","business_unit":"$buId","first_name":"Daniel","user_name":"daniel,icardo","last_name":"Icardo","manual_user_name":"daniel.icardo","phone_number":"971787878782","email":"d.icardo@foo.bar","business_unit_id":"09864604-2caf-4b3f-a79c-c841105f580b","role_id":"12ec03f3-d1dc-11e8-bcd3-000c291e73b1"}"""
+        )
         .getOrElse(Json.Null)
-      val request = buildPostRequest[Json](
-        uri = bouRoute,
-        entity = json,
-        token = initialData.superAdminToken)
+      val request =
+        buildPostRequest[Json](uri = bouRoute, entity = json, token = initialData.superAdminToken)
       val resp = services.run(request)
       check(resp, Status.UnprocessableEntity)
     }
@@ -241,11 +265,13 @@ class ComplexFlowsSpec extends Http4sSpec {
         activeLanguage = None,
         customData = None,
         roleId = rId,
-        businessUnitId = buId)
+        businessUnitId = buId
+      )
       val request = buildPostRequest[BackOfficeUserToCreate](
         uri = bouRoute,
         entity = userToCreate,
-        token = initialData.superAdminToken)
+        token = initialData.superAdminToken
+      )
       val resp = services.run(request)
       check[BackOfficeUserToRead](resp, Status.Created, user ⇒ {
         createdUser = user
@@ -255,9 +281,8 @@ class ComplexFlowsSpec extends Http4sSpec {
     }
 
     "find backoffice user by id" in {
-      val request = buildGetRequest(
-        uri = bouRoute + s"/$userId",
-        token = initialData.superAdminToken)
+      val request =
+        buildGetRequest(uri = bouRoute + s"/$userId", token = initialData.superAdminToken)
       val resp = services.run(request)
       check[BackOfficeUserToRead](resp, Status.Ok, user ⇒ {
         createdUser.userName mustBe user.userName
@@ -265,10 +290,8 @@ class ComplexFlowsSpec extends Http4sSpec {
     }
 
     "find all backoffice users" in {
-      val request = buildGetRequest(
-        uri = bouRoute,
-        token = initialData.superAdminToken)
-      val resp = services.run(request)
+      val request = buildGetRequest(uri = bouRoute, token = initialData.superAdminToken)
+      val resp    = services.run(request)
       check[PaginatedResult[BackOfficeUserToRead]](resp, Status.Ok, page ⇒ {
         val users = page.results
         users.size mustBe page.total
@@ -277,9 +300,8 @@ class ComplexFlowsSpec extends Http4sSpec {
     }
 
     "find all backoffice users (with limit and offset)" in {
-      val request = buildGetRequest(
-        uri = bouRoute + "?limit=1&offset=1",
-        token = initialData.superAdminToken)
+      val request =
+        buildGetRequest(uri = bouRoute + "?limit=1&offset=1", token = initialData.superAdminToken)
       val resp = services.run(request)
       check[PaginatedResult[BackOfficeUserToRead]](resp, Status.Ok, users ⇒ {
         users.total mustBe 2
@@ -292,7 +314,8 @@ class ComplexFlowsSpec extends Http4sSpec {
       val request = buildPutRequest[BackOfficeUserToUpdate](
         uri = bouRoute + s"/$userId",
         entity = userToUpdate,
-        token = initialData.superAdminToken)
+        token = initialData.superAdminToken
+      )
       val resp = services.run(request)
       check[BackOfficeUserToRead](resp, Status.Ok, user ⇒ {
         createdUser = user
@@ -304,9 +327,8 @@ class ComplexFlowsSpec extends Http4sSpec {
 
   "BusinessUnit routes pt. II" should {
     "fail to delete business unit with active users" in {
-      val request = buildDeleteRequest(
-        uri = buRoute + s"/$buId",
-        token = initialData.superAdminToken)
+      val request =
+        buildDeleteRequest(uri = buRoute + s"/$buId", token = initialData.superAdminToken)
       val resp = services.run(request)
       check(resp, Status.BadRequest)
     }
@@ -314,9 +336,8 @@ class ComplexFlowsSpec extends Http4sSpec {
 
   "Role routes pt. II" should {
     "fail to delete role with active users" in {
-      val request = buildDeleteRequest(
-        uri = rolesRoute + s"/$rId",
-        token = initialData.superAdminToken)
+      val request =
+        buildDeleteRequest(uri = rolesRoute + s"/$rId", token = initialData.superAdminToken)
       val resp = services.run(request)
       check(resp, Status.BadRequest)
     }
@@ -325,11 +346,13 @@ class ComplexFlowsSpec extends Http4sSpec {
   "BackOfficeUser routes pt. III" should {
     "delete backoffice user by id" in {
       val resp = for {
-        request1 ← IO(buildDeleteRequest(uri = bouRoute + s"/$userId", token = initialData.superAdminToken))
+        request1 ← IO(
+          buildDeleteRequest(uri = bouRoute + s"/$userId", token = initialData.superAdminToken)
+        )
         _ ← services.run(request1)
-        request2 ← IO(buildGetRequest(
-          uri = bouRoute + s"/$userId",
-          token = initialData.superAdminToken))
+        request2 ← IO(
+          buildGetRequest(uri = bouRoute + s"/$userId", token = initialData.superAdminToken)
+        )
         resp2 ← services.run(request2)
       } yield resp2
       check(resp, Status.NotFound)
@@ -339,11 +362,13 @@ class ComplexFlowsSpec extends Http4sSpec {
   "BusinessUnit routes pt. III" should {
     "delete business unit by id" in {
       val resp = for {
-        request1 ← IO(buildDeleteRequest(uri = buRoute + s"/$buId", token = initialData.superAdminToken))
+        request1 ← IO(
+          buildDeleteRequest(uri = buRoute + s"/$buId", token = initialData.superAdminToken)
+        )
         _ ← services.run(request1)
-        request2 ← IO(buildGetRequest(
-          uri = buRoute + s"/$buId",
-          token = initialData.superAdminToken))
+        request2 ← IO(
+          buildGetRequest(uri = buRoute + s"/$buId", token = initialData.superAdminToken)
+        )
         resp2 ← services.run(request2)
       } yield resp2
       check(resp, Status.NotFound)
@@ -353,11 +378,13 @@ class ComplexFlowsSpec extends Http4sSpec {
   "Role routes pt. III" should {
     "delete role by id" in {
       val resp = for {
-        request1 ← IO(buildDeleteRequest(uri = rolesRoute + s"/$rId", token = initialData.superAdminToken))
+        request1 ← IO(
+          buildDeleteRequest(uri = rolesRoute + s"/$rId", token = initialData.superAdminToken)
+        )
         _ ← services.run(request1)
-        request2 ← IO(buildGetRequest(
-          uri = rolesRoute + s"/$rId",
-          token = initialData.superAdminToken))
+        request2 ← IO(
+          buildGetRequest(uri = rolesRoute + s"/$rId", token = initialData.superAdminToken)
+        )
         resp2 ← services.run(request2)
       } yield resp2
       check(resp, Status.NotFound)
