@@ -14,25 +14,23 @@ case class AppConfig(
     email: EmailConfig,
     couchbase: CouchbaseConfig,
     hdfs: HdfsConfig,
-    proxy: ProxyConfig)
+    proxy: ProxyConfig
+)
 
 object AppConfig {
   def load: AppConfig = ConfigSource.default.at("fp").loadOrThrow[AppConfig]
 
-  case class GlobalConfig(
-      host: String)
+  case class GlobalConfig(host: String)
 
   final case class DbConfig(
       url: String,
       user: String,
       password: String,
       minIdle: Int,
-      poolSize: Int)
+      poolSize: Int
+  )
 
-  final case class LogConfig(
-      isEnabled: Boolean,
-      logHeaders: Boolean,
-      logBody: Boolean)
+  final case class LogConfig(isEnabled: Boolean, logHeaders: Boolean, logBody: Boolean)
 
   final case class AuthConfig(
       tokenExpirationOffsetMinutes: Int,
@@ -42,7 +40,8 @@ object AppConfig {
       requireCaptcha: Boolean,
       recaptchaSecret: String,
       recaptchaUrl: String,
-      secret: String)
+      secret: String
+  )
 
   final case class PasswordConfig(
       default: String,
@@ -51,7 +50,8 @@ object AppConfig {
       nUppercase: Int,
       nSpecialChars: Int,
       length: Int,
-      duplicateCharsAllowed: Boolean)
+      duplicateCharsAllowed: Boolean
+  )
 
   final case class EmailConfig(
       host: String,
@@ -59,23 +59,20 @@ object AppConfig {
       senderAddress: String,
       senderName: String,
       retryTimeout: FiniteDuration,
-      maxRetries: Int)
+      maxRetries: Int
+  )
 
   final case class CouchbaseConfig(
       url: String,
       user: String,
       password: String,
       timeout: Long,
-      bucketName: String)
+      bucketName: String
+  )
 
-  final case class HdfsConfig(
-      uri: String,
-      dfsReplication: String,
-      dfsSupportAppend: String)
+  final case class HdfsConfig(uri: String, dfsReplication: String, dfsSupportAppend: String)
 
-  final case class ProxyConfig(
-      host: String,
-      port: Int) {
+  final case class ProxyConfig(host: String, port: Int) {
     override def toString() = s"$host:$port"
   }
 }

@@ -1,6 +1,6 @@
 package io.dlinov.auth.routes.proxied
 
-import cats.effect.{IO, Resource}
+import cats.effect.{Resource, Sync}
 import io.dlinov.auth.AppConfig.ProxyConfig
 import io.dlinov.auth.domain.auth.entities.{BackOfficeUser, Scopes}
 import org.http4s.client.Client
@@ -9,11 +9,12 @@ import io.dlinov.auth.AppConfig.ProxyConfig
 import io.dlinov.auth.domain.auth.entities.{BackOfficeUser, Scopes}
 import io.dlinov.auth.routes.Routes.ApiPrefix
 
-class AccountsProxy(
-    override val authCtx: AuthedContext[IO, BackOfficeUser],
-    override val httpClientResource: Resource[IO, Client[IO]],
-    override val proxyConfig: ProxyConfig)
-  extends ProxiedRoute {
+class AccountsProxy[F[_]](
+    override val authCtx: AuthedContext[F, BackOfficeUser],
+    override val httpClientResource: Resource[F, Client[F]],
+    override val proxyConfig: ProxyConfig
+)(implicit override protected val syncF: Sync[F])
+    extends ProxiedRoute[F] {
 
   override protected val routeRoot: String = ApiPrefix + "/accounts"
 

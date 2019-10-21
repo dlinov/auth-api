@@ -6,4 +6,5 @@ final case class PermissionBlueprint(
     revoke: Boolean,
     pKey: PermissionKey,
     scopeId: UUID,
-    createdBy: String)
+    createdBy: String
+)

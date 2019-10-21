@@ -2,7 +2,6 @@ package io.dlinov.auth
 
 import java.util.UUID
 
-import cats.effect.IO
 import cats.syntax.either._
 import io.dlinov.auth.domain.ServiceError
 import org.http4s.Request
@@ -10,8 +9,8 @@ import org.http4s.headers.Authorization
 import io.dlinov.auth.domain.BaseService.ServiceResponse
 import io.dlinov.auth.domain.ServiceError
 
-trait TokenExtractBehavior {
-  protected def extractTokenFromRequest(request: Request[IO]): ServiceResponse[String] = {
+trait TokenExtractBehavior[F[_]] {
+  protected def extractTokenFromRequest(request: Request[F]): ServiceResponse[String] = {
     Authorization
       .from(request.headers)
       .fold[ServiceResponse[String]] {
@@ -23,7 +22,7 @@ trait TokenExtractBehavior {
     (for {
       rawToken ← {
         val hValue = header.value
-        val i = hValue.indexOf("Bearer ")
+        val i      = hValue.indexOf("Bearer ")
         if (i > -1) {
           Right(hValue.substring(i + "Bearer ".length))
         } else {

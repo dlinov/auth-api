@@ -6,5 +6,5 @@ sealed trait PermissionKey
 
 object PermissionKeys {
   final case class BusinessUnitAndRolePermissionKey(buId: UUID, roleId: UUID) extends PermissionKey
-  final case class UserPermissionKey(userId: UUID) extends PermissionKey
+  final case class UserPermissionKey(userId: UUID)                            extends PermissionKey
 }

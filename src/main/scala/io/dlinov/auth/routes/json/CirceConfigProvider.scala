@@ -7,8 +7,6 @@ trait CirceConfigProvider {
 }
 
 object CirceConfigProvider {
-  val snakeConfig: Configuration = Configuration.default
-    .withSnakeCaseConstructorNames
-    .withSnakeCaseMemberNames
-    .withDefaults
+  val snakeConfig: Configuration =
+    Configuration.default.withSnakeCaseConstructorNames.withSnakeCaseMemberNames.withDefaults
 }

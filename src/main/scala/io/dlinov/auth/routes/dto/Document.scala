@@ -12,7 +12,9 @@ case class Document(
     /*@ApiModelProperty(name = "document_id", required = true) */ documentId: UUID,
     /*@ApiModelProperty(name = "customer_id", required = true) */ customerId: UUID,
     /*@ApiModelProperty(name = "document_type", required = true) */ documentType: String,
-    /*@ApiModelProperty(name = "document_type_identifier", required = false) */ documentTypeIdentifier: Option[String],
+    /*@ApiModelProperty(name = "document_type_identifier", required = false) */ documentTypeIdentifier: Option[
+      String
+    ],
     /*@ApiModelProperty(name = "purpose", required = true) */ purpose: String,
     status: String,
     rejectionReason: Option[String],
@@ -22,7 +24,8 @@ case class Document(
     uploadedAt: Option[ZonedDateTime],
     checkedBy: Option[String],
     checkedAt: Option[ZonedDateTime],
-    link: Option[String])
+    link: Option[String]
+)
 
 object Document {
   val empty = new Document(
@@ -39,5 +42,6 @@ object Document {
     uploadedAt = None,
     checkedBy = None,
     checkedAt = None,
-    link = None)
+    link = None
+  )
 }

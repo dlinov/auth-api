@@ -29,7 +29,7 @@ trait Dao {
 
 object Dao {
   type DaoResponse[T] = Either[DaoError, T]
-  type EntityId = UUID
+  type EntityId       = UUID
 
   val tz: ZoneOffset = ZoneOffset.UTC
 
@@ -38,8 +38,8 @@ object Dao {
   abstract class DaoException(val cause: Throwable) extends RuntimeException(cause)
 
   class EntityNotFoundException(val entityId: EntityId, override val cause: Throwable)
-    extends DaoException(cause)
+      extends DaoException(cause)
 
   class UniqueConstraintViolationException(val entityId: EntityId, override val cause: SQLException)
-    extends DaoException(cause)
+      extends DaoException(cause)
 }

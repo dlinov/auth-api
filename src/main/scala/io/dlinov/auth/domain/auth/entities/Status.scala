@@ -8,14 +8,14 @@ sealed trait Status {
 
 object Status {
   case object Inactive extends Status {
-    override final val value: Int = 0
+    final override val value: Int = 0
   }
 
   case object Active extends Status {
-    override final val value: Int = 1
+    final override val value: Int = 1
   }
 
-  lazy val all: Set[Status] = EnumerateSingletons[Status]
+  lazy val all: Set[Status]         = EnumerateSingletons[Status]
   lazy val allMap: Map[Int, Status] = all.map(s ⇒ s.value → s).toMap
 
   def from: Int ⇒ Status = allMap

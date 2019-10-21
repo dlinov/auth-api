@@ -10,13 +10,17 @@ import io.dlinov.auth.util.Constants
 final case class DocumentToCreate(
     customerId: UUID,
     /*@ApiModelProperty(name = "document_type", required = true) */ documentType: String,
-    /*@ApiModelProperty(name = "document_type_identifier", required = false) */ documentTypeIdentifier: Option[String],
-    /*@ApiModelProperty(name = "purpose", required = true) */ purpose: String)
+    /*@ApiModelProperty(name = "document_type_identifier", required = false) */ documentTypeIdentifier: Option[
+      String
+    ],
+    /*@ApiModelProperty(name = "purpose", required = true) */ purpose: String
+)
 
 object DocumentToCreate {
   val empty = new DocumentToCreate(
     customerId = Constants.EmptyUUID,
     documentType = "",
     documentTypeIdentifier = None,
-    purpose = "")
+    purpose = ""
+  )
 }

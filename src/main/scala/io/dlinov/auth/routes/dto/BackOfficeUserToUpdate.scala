@@ -16,7 +16,8 @@ case class BackOfficeUserToUpdate(
     activeLanguage: Option[String],
     customData: Option[Json],
     roleId: Option[UUID],
-    businessUnitId: Option[UUID])
+    businessUnitId: Option[UUID]
+)
 
 object BackOfficeUserToUpdate {
   val empty = BackOfficeUserToUpdate(
@@ -30,5 +31,6 @@ object BackOfficeUserToUpdate {
     activeLanguage = None,
     customData = None,
     roleId = None,
-    businessUnitId = None)
+    businessUnitId = None
+  )
 }

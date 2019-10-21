@@ -3,7 +3,7 @@ package io.dlinov.auth.dao.hikari
 import java.time.{Instant, ZoneOffset, ZonedDateTime}
 import java.util.UUID
 
-import cats.effect.{Blocker, ContextShift, IO}
+import cats.effect.{Async, Blocker, ContextShift}
 import com.zaxxer.hikari.{HikariConfig, HikariDataSource}
 import doobie._
 import doobie.syntax.string._
@@ -13,18 +13,23 @@ import io.dlinov.auth.dao.DBFApi
 import io.dlinov.auth.dao.hikari.ec.{ConnectECWrapper, TransactECWrapper}
 import io.dlinov.auth.domain.auth.entities.Email
 import io.dlinov.auth.routes.dto.PermissionKey
-import org.slf4j.LoggerFactory
 import io.dlinov.auth.domain.auth.entities.Email
 import io.dlinov.auth.AppConfig.DbConfig
 import io.dlinov.auth.dao.DBFApi
 import io.dlinov.auth.dao.hikari.ec.{ConnectECWrapper, TransactECWrapper}
 import io.dlinov.auth.routes.dto.PermissionKey
-import io.dlinov.auth.routes.dto.PermissionKeys.{BusinessUnitAndRolePermissionKey, UserPermissionKey}
+import io.dlinov.auth.routes.dto.PermissionKeys.{
+  BusinessUnitAndRolePermissionKey,
+  UserPermissionKey
+}
+import org.slf4j.LoggerFactory
 
-class HikariDBFApi(
+class HikariDBFApi[F[_]: Async](
     dbConfig: DbConfig,
     connectEC: ConnectECWrapper,
-    transactEC: TransactECWrapper)(implicit val cs: ContextShift[IO]) extends DBFApi[IO] {
+    transactEC: TransactECWrapper
+)(implicit val cs: ContextShift[F])
+    extends DBFApi[F] {
 
   val config = new HikariConfig()
   config.setJdbcUrl(dbConfig.url)
@@ -35,10 +40,12 @@ class HikariDBFApi(
 
   println(config.getJdbcUrl)
   private val hikariDataSource = new HikariDataSource(config)
-  private val hikariTransactor: HikariTransactor[IO] =
-    HikariTransactor[IO](hikariDataSource, connectEC.ec, Blocker.liftExecutionContext(transactEC.ec))
+  private val hikariTransactor: HikariTransactor[F] =
+    HikariTransactor[F](hikariDataSource, connectEC.ec, Blocker.liftExecutionContext(transactEC.ec))
 
-  override val transactor: IO[HikariTransactor[IO]] = IO.pure(hikariTransactor)
+  override val transactor: F[Transactor[F]] = {
+    Async[F].delay[Transactor[F]](hikariTransactor)
+  }
 }
 
 object HikariDBFApi {
@@ -89,14 +96,19 @@ object HikariDBFApi {
     Meta[String].timap(Email.apply)(_.value)
   }
 
-  implicit val pKeyRead: Read[PermissionKey] = Read[(Option[UUID], Option[UUID], Option[UUID])].map {
-    case (_, Some(userId), _) ⇒ UserPermissionKey(userId)
-    case (Some(buId), _, Some(roleId)) ⇒ BusinessUnitAndRolePermissionKey(buId, roleId)
-    case _ ⇒ throw new IllegalArgumentException("Row should be either user or business unit/role permission")
-  }
+  implicit val pKeyRead: Read[PermissionKey] =
+    Read[(Option[UUID], Option[UUID], Option[UUID])].map {
+      case (_, Some(userId), _)          ⇒ UserPermissionKey(userId)
+      case (Some(buId), _, Some(roleId)) ⇒ BusinessUnitAndRolePermissionKey(buId, roleId)
+      case _ ⇒
+        throw new IllegalArgumentException(
+          "Row should be either user or business unit/role permission"
+        )
+    }
 
-  implicit val pKeyWrite: Write[PermissionKey] = Write[(Option[UUID], Option[UUID], Option[UUID])].contramap {
-    case BusinessUnitAndRolePermissionKey(buId, roleId) ⇒ (Some(buId), None, Some(roleId))
-    case UserPermissionKey(userId) ⇒ (None, Some(userId), None)
-  }
+  implicit val pKeyWrite: Write[PermissionKey] =
+    Write[(Option[UUID], Option[UUID], Option[UUID])].contramap {
+      case BusinessUnitAndRolePermissionKey(buId, roleId) ⇒ (Some(buId), None, Some(roleId))
+      case UserPermissionKey(userId)                      ⇒ (None, Some(userId), None)
+    }
 }

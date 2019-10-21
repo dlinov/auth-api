@@ -9,12 +9,13 @@ import io.dlinov.auth.util.Constants
 // @ApiModel(value = "CustomerDocumentToUpload")
 case class DocumentToUpload(
     /*@ApiModelProperty(name = "file_blob", required = true) */ fileBlob: String,
-    /*@ApiModelProperty(name = "file_blob_preview", required = true) */ fileBlobPreview: Option[String],
-    /*@ApiModelProperty(name = "uploaded_at", required = true) */ uploadedAt: ZonedDateTime)
+    /*@ApiModelProperty(name = "file_blob_preview", required = true) */ fileBlobPreview: Option[
+      String
+    ],
+    /*@ApiModelProperty(name = "uploaded_at", required = true) */ uploadedAt: ZonedDateTime
+)
 
 object DocumentToUpload {
-  val empty = new DocumentToUpload(
-    fileBlob = "",
-    fileBlobPreview = None,
-    uploadedAt = Constants.MinDateTime)
+  val empty =
+    new DocumentToUpload(fileBlob = "", fileBlobPreview = None, uploadedAt = Constants.MinDateTime)
 }

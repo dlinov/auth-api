@@ -1,4 +1,3 @@
 package io.dlinov.auth.routes.dto
 
-case class BusinessUnitToCreate(
-    name: String)
+case class BusinessUnitToCreate(name: String)

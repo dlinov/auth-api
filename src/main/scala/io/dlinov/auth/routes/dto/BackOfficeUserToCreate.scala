@@ -17,4 +17,5 @@ case class BackOfficeUserToCreate(
     description: Option[String],
     homePage: Option[String],
     activeLanguage: Option[String],
-    customData: Option[Json])
+    customData: Option[Json]
+)

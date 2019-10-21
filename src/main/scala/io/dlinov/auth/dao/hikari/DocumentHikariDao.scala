@@ -3,8 +3,10 @@ package io.dlinov.auth.dao.hikari
 import java.time.ZonedDateTime
 import java.util.UUID
 
-import cats.effect.IO
+import cats.effect.Effect
 import cats.syntax.either._
+import cats.syntax.flatMap._
+import cats.syntax.functor._
 import doobie._
 import doobie.implicits._
 import io.dlinov.auth.dao.DBFApi
@@ -19,19 +21,19 @@ import io.dlinov.auth.routes.dto.Document
 
 import scala.collection.mutable.ListBuffer
 
-class DocumentHikariDao(db: DBFApi[IO])
-  extends DocumentFDao {
+class DocumentHikariDao[F[_]: Effect](db: DBFApi[F]) extends DocumentFDao[F] {
 
   import HikariDBFApi._
   import DocumentHikariDao._
 
   override def create(
-    customerId: UUID,
-    documentType: String,
-    documentTypeIdentifier: Option[String],
-    purpose: String,
-    blobId: String,
-    createdBy: String): IO[DaoResponse[Document]] = {
+      customerId: UUID,
+      documentType: String,
+      documentTypeIdentifier: Option[String],
+      purpose: String,
+      blobId: String,
+      createdBy: String
+  ): F[DaoResponse[Document]] = {
     for {
       xa ← db.transactor
       result ← createInternal(
@@ -40,9 +42,8 @@ class DocumentHikariDao(db: DBFApi[IO])
         documentTypeIdentifier = documentTypeIdentifier,
         purpose = purpose,
         blobId = blobId,
-        createdBy = createdBy)
-        .transact(xa)
-        .attempt
+        createdBy = createdBy
+      ).transact(xa).attemptSql
     } yield result.leftMap { exc ⇒
       val msg = s"Unexpected error in .create($customerId,..,$createdBy): " + exc.getMessage
       logger.warn(msg, exc)
@@ -50,10 +51,10 @@ class DocumentHikariDao(db: DBFApi[IO])
     }
   }
 
-  override def findById(id: UUID): IO[DaoResponse[Option[Document]]] = {
+  override def findById(id: UUID): F[DaoResponse[Option[Document]]] = {
     for {
-      xa ← db.transactor
-      maybeDoc ← findByIdInternal(id).transact(xa).attempt
+      xa       ← db.transactor
+      maybeDoc ← findByIdInternal(id).transact(xa).attemptSql
     } yield maybeDoc.leftMap { exc ⇒
       val msg = s"Unexpected error in .findById($id): " + exc.getMessage
       logger.warn(msg, exc)
@@ -62,13 +63,14 @@ class DocumentHikariDao(db: DBFApi[IO])
   }
 
   override def find(
-    maybeCustomerId: Option[UUID],
-    maybeStatus: Option[String],
-    maybeStartDate: Option[ZonedDateTime],
-    maybeEndDate: Option[ZonedDateTime],
-    maybeOrderBy: Option[String],
-    maybeLimit: Option[Int],
-    maybeOffset: Option[Int]): IO[DaoResponse[PaginatedResult[Document]]] = {
+      maybeCustomerId: Option[UUID],
+      maybeStatus: Option[String],
+      maybeStartDate: Option[ZonedDateTime],
+      maybeEndDate: Option[ZonedDateTime],
+      maybeOrderBy: Option[String],
+      maybeLimit: Option[Int],
+      maybeOffset: Option[Int]
+  ): F[DaoResponse[PaginatedResult[Document]]] = {
     for {
       xa ← db.transactor
       docsOrError ← findInternal(
@@ -78,14 +80,16 @@ class DocumentHikariDao(db: DBFApi[IO])
         maybeEndDate = maybeEndDate,
         maybeOrderBy = maybeOrderBy,
         maybeLimit = maybeLimit,
-        maybeOffset = maybeOffset).transact(xa).attempt
+        maybeOffset = maybeOffset
+      ).transact(xa).attemptSql
     } yield docsOrError
       .map { docsAndTotal ⇒
         PaginatedResult(
           total = docsAndTotal._2,
           results = docsAndTotal._1,
           limit = maybeLimit.getOrElse(Int.MaxValue),
-          offset = maybeOffset.getOrElse(0))
+          offset = maybeOffset.getOrElse(0)
+        )
       }
       .leftMap { exc ⇒
         val msg = s"Unexpected error in .find(..): " + exc.getMessage
@@ -94,13 +98,13 @@ class DocumentHikariDao(db: DBFApi[IO])
       }
   }
 
-  override def approve(id: UUID, updatedBy: String): IO[DaoResponse[Option[Document]]] = {
+  override def approve(id: UUID, updatedBy: String): F[DaoResponse[Option[Document]]] = {
     for {
       xa ← db.transactor
       result ← (for {
-        _ ← approveQuery(id, updatedBy).update.run
+        _        ← approveQuery(id, updatedBy).update.run
         maybeDoc ← findByIdInternal(id)
-      } yield maybeDoc).transact(xa).attempt
+      } yield maybeDoc).transact(xa).attemptSql
     } yield result.leftMap { exc ⇒
       val msg = s"Unexpected error in .approve($id, $updatedBy): " + exc.getMessage
       logger.warn(msg, exc)
@@ -108,13 +112,13 @@ class DocumentHikariDao(db: DBFApi[IO])
     }
   }
 
-  override def reject(id: UUID, updatedBy: String): IO[DaoResponse[Option[Document]]] = {
+  override def reject(id: UUID, updatedBy: String): F[DaoResponse[Option[Document]]] = {
     for {
       xa ← db.transactor
       result ← (for {
-        _ ← rejectQuery(id, updatedBy).update.run
+        _        ← rejectQuery(id, updatedBy).update.run
         maybeDoc ← findByIdInternal(id)
-      } yield maybeDoc).transact(xa).attempt
+      } yield maybeDoc).transact(xa).attemptSql
     } yield result.leftMap { exc ⇒
       val msg = s"Unexpected error in .reject($id, $updatedBy): " + exc.getMessage
       logger.warn(msg, exc)
@@ -123,12 +127,13 @@ class DocumentHikariDao(db: DBFApi[IO])
   }
 
   private[hikari] def createInternal(
-    customerId: UUID,
-    documentType: String,
-    documentTypeIdentifier: Option[String],
-    purpose: String,
-    blobId: String,
-    createdBy: String): ConnectionIO[Document] = {
+      customerId: UUID,
+      documentType: String,
+      documentTypeIdentifier: Option[String],
+      purpose: String,
+      blobId: String,
+      createdBy: String
+  ): ConnectionIO[Document] = {
     val id = UUID.randomUUID()
     for {
       _ ← insertQuery(
@@ -139,7 +144,8 @@ class DocumentHikariDao(db: DBFApi[IO])
         purpose = purpose,
         blobId = blobId,
         cBy = createdBy,
-        cAt = nowUTC).update.run
+        cAt = nowUTC
+      ).update.run
       bu ← fetchByIdInternal(id)
     } yield bu
   }
@@ -157,13 +163,14 @@ class DocumentHikariDao(db: DBFApi[IO])
   }
 
   private[hikari] def findInternal(
-    maybeCustomerId: Option[UUID],
-    maybeStatus: Option[String],
-    maybeStartDate: Option[ZonedDateTime],
-    maybeEndDate: Option[ZonedDateTime],
-    maybeOrderBy: Option[String],
-    maybeLimit: Option[Int],
-    maybeOffset: Option[Int]): ConnectionIO[(Seq[Document], Int)] = {
+      maybeCustomerId: Option[UUID],
+      maybeStatus: Option[String],
+      maybeStartDate: Option[ZonedDateTime],
+      maybeEndDate: Option[ZonedDateTime],
+      maybeOrderBy: Option[String],
+      maybeLimit: Option[Int],
+      maybeOffset: Option[Int]
+  ): ConnectionIO[(Seq[Document], Int)] = {
     val q = query(
       maybeCustomerId = maybeCustomerId,
       maybeStatus = maybeStatus,
@@ -171,10 +178,11 @@ class DocumentHikariDao(db: DBFApi[IO])
       maybeEndDate = maybeEndDate,
       maybeOrderBy = maybeOrderBy,
       maybeLimit = maybeLimit,
-      maybeOffset = maybeOffset)(_)
+      maybeOffset = maybeOffset
+    )(_)
     for {
       total ← q(true).query[Int].unique
-      page ← q(false).query[Document].to[Seq]
+      page  ← q(false).query[Document].to[Seq]
     } yield (page, total)
 
   }
@@ -185,15 +193,32 @@ object DocumentHikariDao {
 
   final val TableName: Fragment = Fragment.const("documents")
 
-  private final val columns = Seq("id", "customerId", "documentType", "documentTypeIdentifier", "purpose", "status",
-    "rejectionReason", "createdBy", "createdAt", "uploadedBy", "uploadedAt", "checkedBy", "checkedAt", "blobId")
-  private final val columnsAsString = Fragment.const(columns.mkString(", "))
+  final private val columns = Seq(
+    "id",
+    "customerId",
+    "documentType",
+    "documentTypeIdentifier",
+    "purpose",
+    "status",
+    "rejectionReason",
+    "createdBy",
+    "createdAt",
+    "uploadedBy",
+    "uploadedAt",
+    "checkedBy",
+    "checkedAt",
+    "blobId"
+  )
+  final private val columnsAsString = Fragment.const(columns.mkString(", "))
 
-  val SelectFromTable: Fragment = Fragment.const("SELECT") ++ columnsAsString ++ Fragment.const("FROM") ++ TableName
+  val SelectFromTable: Fragment = Fragment.const("SELECT") ++ columnsAsString ++ Fragment.const(
+    "FROM"
+  ) ++ TableName
   val SelectCountFromTable: Fragment = Fragment.const("SELECT COUNT(*) FROM") ++ TableName
 
   val InsertIntoTable: Fragment =
-    Fragment.const("INSERT INTO") ++ TableName ++ Fragment.const("(") ++ columnsAsString ++ Fragment.const(") VALUES")
+    Fragment.const("INSERT INTO") ++ TableName ++ Fragment.const("(") ++ columnsAsString ++ Fragment
+      .const(") VALUES")
 
   val UpdateTable: Fragment =
     Fragment.const("UPDATE") ++ TableName ++ Fragment.const(" SET ")
@@ -201,13 +226,14 @@ object DocumentHikariDao {
   def queryById(id: UUID): Fragment = SelectFromTable ++ fr"WHERE id = $id"
 
   def query(
-    maybeCustomerId: Option[UUID],
-    maybeStatus: Option[String],
-    maybeStartDate: Option[ZonedDateTime],
-    maybeEndDate: Option[ZonedDateTime],
-    maybeOrderBy: Option[String],
-    maybeLimit: Option[Int],
-    maybeOffset: Option[Int])(count: Boolean): Fragment = {
+      maybeCustomerId: Option[UUID],
+      maybeStatus: Option[String],
+      maybeStartDate: Option[ZonedDateTime],
+      maybeEndDate: Option[ZonedDateTime],
+      maybeOrderBy: Option[String],
+      maybeLimit: Option[Int],
+      maybeOffset: Option[Int]
+  )(count: Boolean): Fragment = {
     val fragments = ListBuffer.newBuilder[Fragment]
     maybeCustomerId.foreach(cid ⇒ fragments += fr"customerId = $cid")
     maybeStatus.foreach(status ⇒ fragments += fr"status = $status")
@@ -225,23 +251,21 @@ object DocumentHikariDao {
   }
 
   def insertQuery(
-    id: UUID,
-    customerId: UUID,
-    docType: String,
-    docTypeIdentifier: Option[String],
-    purpose: String,
-    blobId: String,
-    cBy: String,
-    cAt: ZonedDateTime): Fragment = {
+      id: UUID,
+      customerId: UUID,
+      docType: String,
+      docTypeIdentifier: Option[String],
+      purpose: String,
+      blobId: String,
+      cBy: String,
+      cAt: ZonedDateTime
+  ): Fragment = {
     InsertIntoTable ++
       fr"($id, $customerId, $docType, $docTypeIdentifier, $purpose, 'PENDING', NULL, $cBy, $cAt," ++
       fr"NULL, NULL, NULL, NULL, $blobId)"
   }
 
-  def reactivateQuery(
-    id: UUID,
-    name: String,
-    cBy: String): Fragment = {
+  def reactivateQuery(id: UUID, name: String, cBy: String): Fragment = {
     UpdateTable ++ fr"name = $name, status = 1, uBy = $cBy WHERE id = $id;"
   }
 
@@ -249,10 +273,7 @@ object DocumentHikariDao {
 
   def rejectQuery(id: UUID, rejectedBy: String): Fragment = updateQuery(id, "REJECTED", rejectedBy)
 
-  private def updateQuery(
-    id: UUID,
-    status: String,
-    uBy: String): Fragment = {
+  private def updateQuery(id: UUID, status: String, uBy: String): Fragment = {
     UpdateTable ++ fr"status = $status, uBy = $uBy WHERE id = $id;"
   }
 }

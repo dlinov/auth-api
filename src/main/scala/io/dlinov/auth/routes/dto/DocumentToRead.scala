@@ -11,4 +11,5 @@ final case class DocumentToRead(
     purpose: String,
     link: Option[String],
     createdBy: String,
-    createdAt: ZonedDateTime)
+    createdAt: ZonedDateTime
+)

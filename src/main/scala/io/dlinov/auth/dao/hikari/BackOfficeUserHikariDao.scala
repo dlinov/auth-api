@@ -4,9 +4,11 @@ import java.time.ZonedDateTime
 import java.util.UUID
 
 import cats.data.OptionT
-import cats.effect.IO
+import cats.effect.Effect
 import cats.instances.list._
 import cats.syntax.either._
+import cats.syntax.flatMap._
+import cats.syntax.functor._
 import cats.syntax.traverse._
 import doobie._
 import doobie.implicits._
@@ -22,65 +24,66 @@ import io.dlinov.auth.domain.PaginatedResult
 
 import scala.collection.mutable.ArrayBuffer
 
-class BackOfficeUserHikariDao(
-    db: DBFApi[IO],
-    permissionDao: PermissionHikariDao)
-  extends BackOfficeUserFDao {
+class BackOfficeUserHikariDao[F[_]: Effect](db: DBFApi[F], permissionDao: PermissionHikariDao[F])
+    extends BackOfficeUserFDao[F] {
 
   import HikariDBFApi._
   import BackOfficeUserHikariDao._
 
   def create(
-    userName: String,
-    password: String,
-    email: Email,
-    phoneNumber: Option[String],
-    firstName: String,
-    middleName: Option[String],
-    lastName: String,
-    description: Option[String],
-    homePage: Option[String],
-    activeLanguage: Option[String],
-    customData: Option[String],
-    roleId: UUID,
-    businessUnitId: UUID,
-    createdBy: String,
-    reactivate: Boolean): IO[DaoResponse[BackOfficeUser]] = {
+      userName: String,
+      password: String,
+      email: Email,
+      phoneNumber: Option[String],
+      firstName: String,
+      middleName: Option[String],
+      lastName: String,
+      description: Option[String],
+      homePage: Option[String],
+      activeLanguage: Option[String],
+      customData: Option[String],
+      roleId: UUID,
+      businessUnitId: UUID,
+      createdBy: String,
+      reactivate: Boolean
+  ): F[DaoResponse[BackOfficeUser]] = {
     for {
       xa ← db.transactor
       result ← (if (reactivate) {
-        reactivateInternal(
-          userName = userName,
-          password = password,
-          email = email,
-          phoneNumber = phoneNumber,
-          firstName = firstName,
-          middleName = middleName,
-          lastName = lastName,
-          description = description,
-          homePage = homePage,
-          activeLanguage = activeLanguage,
-          customData = customData,
-          roleId = roleId,
-          businessUnitId = businessUnitId,
-          createdBy = createdBy)
-      } else {
-        createInternal(
-          userName = userName,
-          password = password,
-          email = email,
-          phoneNumber = phoneNumber,
-          firstName = firstName,
-          middleName = middleName,
-          lastName = lastName,
-          description = description,
-          homePage = homePage,
-          activeLanguage = activeLanguage,
-          customData = customData,
-          roleId = roleId,
-          businessUnitId = businessUnitId,
-          createdBy = createdBy)
-      }).transact(xa).attempt
+                  reactivateInternal(
+                    userName = userName,
+                    password = password,
+                    email = email,
+                    phoneNumber = phoneNumber,
+                    firstName = firstName,
+                    middleName = middleName,
+                    lastName = lastName,
+                    description = description,
+                    homePage = homePage,
+                    activeLanguage = activeLanguage,
+                    customData = customData,
+                    roleId = roleId,
+                    businessUnitId = businessUnitId,
+                    createdBy = createdBy
+                  )
+                } else {
+                  createInternal(
+                    userName = userName,
+                    password = password,
+                    email = email,
+                    phoneNumber = phoneNumber,
+                    firstName = firstName,
+                    middleName = middleName,
+                    lastName = lastName,
+                    description = description,
+                    homePage = homePage,
+                    activeLanguage = activeLanguage,
+                    customData = customData,
+                    roleId = roleId,
+                    businessUnitId = businessUnitId,
+                    createdBy = createdBy
+                  )
+                }).transact(xa).attemptSql
     } yield result.leftMap { exc ⇒
       val msg = s"Unexpected error in .create($userName,..): " + exc.getMessage
       logger.warn(msg, exc)
@@ -88,10 +91,10 @@ class BackOfficeUserHikariDao(
     }
   }
 
-  override def findById(id: UUID): IO[DaoResponse[Option[BackOfficeUser]]] = {
+  override def findById(id: UUID): F[DaoResponse[Option[BackOfficeUser]]] = {
     for {
-      xa ← db.transactor
-      result ← findByIdInternal(id).transact(xa).attempt
+      xa     ← db.transactor
+      result ← findByIdInternal(id).transact(xa).attemptSql
     } yield result.leftMap { exc ⇒
       val msg = s"Unexpected error in .findById($id): " + exc.getMessage
       logger.warn(msg, exc)
@@ -99,10 +102,10 @@ class BackOfficeUserHikariDao(
     }
   }
 
-  override def findByName(name: String): IO[DaoResponse[Option[BackOfficeUser]]] = {
+  override def findByName(name: String): F[DaoResponse[Option[BackOfficeUser]]] = {
     for {
-      xa ← db.transactor
-      result ← findByNameInternal(name).transact(xa).attempt
+      xa     ← db.transactor
+      result ← findByNameInternal(name).transact(xa).attemptSql
     } yield result.leftMap { exc ⇒
       val msg = s"Unexpected error in .findByName($name): " + exc.getMessage
       logger.warn(msg, exc)
@@ -111,12 +114,13 @@ class BackOfficeUserHikariDao(
   }
 
   override def findAll(
-    maybeLimit: Option[Int],
-    maybeOffset: Option[Int],
-    maybeFirstName: Option[String],
-    maybeLastName: Option[String],
-    maybeEmail: Option[String],
-    maybePhoneNumber: Option[String]): IO[DaoResponse[PaginatedResult[BackOfficeUser]]] = {
+      maybeLimit: Option[Int],
+      maybeOffset: Option[Int],
+      maybeFirstName: Option[String],
+      maybeLastName: Option[String],
+      maybeEmail: Option[String],
+      maybePhoneNumber: Option[String]
+  ): F[DaoResponse[PaginatedResult[BackOfficeUser]]] = {
     for {
       xa ← db.transactor
       result ← findAllInternal(
@@ -125,7 +129,8 @@ class BackOfficeUserHikariDao(
         maybeFirstName = maybeFirstName,
         maybeLastName = maybeLastName,
         maybeEmail = maybeEmail,
-        maybePhoneNumber = maybePhoneNumber).transact(xa).attempt
+        maybePhoneNumber = maybePhoneNumber
+      ).transact(xa).attemptSql
     } yield result.leftMap { exc ⇒
       val msg = s"Unexpected error in .findAll: " + exc.getMessage
       logger.warn(msg, exc)
@@ -133,10 +138,10 @@ class BackOfficeUserHikariDao(
     }
   }
 
-  override def countActiveByRoleId(roleId: UUID): IO[DaoResponse[Int]] = {
+  override def countActiveByRoleId(roleId: UUID): F[DaoResponse[Int]] = {
     for {
-      xa ← db.transactor
-      result ← countActiveByRoleIdInternal(roleId).transact(xa).attempt
+      xa     ← db.transactor
+      result ← countActiveByRoleIdInternal(roleId).transact(xa).attemptSql
     } yield result.leftMap { exc ⇒
       val msg = s"Unexpected error in .countActiveByRoleId($roleId): " + exc.getMessage
       logger.warn(msg, exc)
@@ -144,10 +149,10 @@ class BackOfficeUserHikariDao(
     }
   }
 
-  override def countActiveByBusinessUnitId(buId: UUID): IO[DaoResponse[Int]] = {
+  override def countActiveByBusinessUnitId(buId: UUID): F[DaoResponse[Int]] = {
     for {
-      xa ← db.transactor
-      result ← countActiveByBusinessUnitIdInternal(buId).transact(xa).attempt
+      xa     ← db.transactor
+      result ← countActiveByBusinessUnitIdInternal(buId).transact(xa).attemptSql
     } yield result.leftMap { exc ⇒
       val msg = s"Unexpected error in .countActiveByBusinessUnitId($buId): " + exc.getMessage
       logger.warn(msg, exc)
@@ -156,19 +161,20 @@ class BackOfficeUserHikariDao(
   }
 
   override def update(
-    id: UUID,
-    email: Option[String],
-    phoneNumber: Option[String],
-    firstName: Option[String],
-    middleName: Option[String],
-    lastName: Option[String],
-    description: Option[String],
-    homePage: Option[String],
-    activeLanguage: Option[String],
-    customData: Option[String],
-    roleId: Option[UUID],
-    businessUnitId: Option[UUID],
-    updatedBy: String): IO[DaoResponse[Option[BackOfficeUser]]] = {
+      id: UUID,
+      email: Option[String],
+      phoneNumber: Option[String],
+      firstName: Option[String],
+      middleName: Option[String],
+      lastName: Option[String],
+      description: Option[String],
+      homePage: Option[String],
+      activeLanguage: Option[String],
+      customData: Option[String],
+      roleId: Option[UUID],
+      businessUnitId: Option[UUID],
+      updatedBy: String
+  ): F[DaoResponse[Option[BackOfficeUser]]] = {
     for {
       xa ← db.transactor
       result ← updateInternal(
@@ -184,7 +190,8 @@ class BackOfficeUserHikariDao(
         customData = customData,
         roleId = roleId,
         businessUnitId = businessUnitId,
-        updatedBy = updatedBy).transact(xa).attempt
+        updatedBy = updatedBy
+      ).transact(xa).attemptSql
     } yield result.leftMap { exc ⇒
       val msg = s"Unexpected error in .update($id,..): " + exc.getMessage
       logger.warn(msg, exc)
@@ -192,13 +199,13 @@ class BackOfficeUserHikariDao(
     }
   }
 
-  def remove(id: UUID, updatedBy: String): IO[DaoResponse[Option[BackOfficeUser]]] = {
+  def remove(id: UUID, updatedBy: String): F[DaoResponse[Option[BackOfficeUser]]] = {
     for {
       xa ← db.transactor
       maybeUser ← (for {
         user ← OptionT(findByIdInternal(id))
-        _ ← OptionT.liftF(removeQuery(id, updatedBy).update.run)
-      } yield user).value.transact(xa).attempt
+        _    ← OptionT.liftF(removeQuery(id, updatedBy).update.run)
+      } yield user).value.transact(xa).attemptSql
     } yield maybeUser.leftMap { exc ⇒
       val msg = s"Unexpected error in .remove($id, $updatedBy): " + exc.getMessage
       logger.warn(msg, exc)
@@ -206,51 +213,53 @@ class BackOfficeUserHikariDao(
     }
   }
 
-  override def login(name: String, passwordHash: String): IO[Option[BackOfficeUser]] = {
+  override def login(name: String, passwordHash: String): F[Option[BackOfficeUser]] = {
     for {
-      xa ← db.transactor
+      xa     ← db.transactor
       result ← loginInternal(name, passwordHash).transact(xa)
     } yield result
   }
 
   override def updatePassword(
-    name: String,
-    oldPasswordHash: String,
-    passwordHash: String): IO[Option[BackOfficeUser]] = {
+      name: String,
+      oldPasswordHash: String,
+      passwordHash: String
+  ): F[Option[BackOfficeUser]] = {
     for {
       xa ← db.transactor
       result ← (for {
-        _ ← updatePasswordInternal(name, oldPasswordHash, passwordHash)
+        _         ← updatePasswordInternal(name, oldPasswordHash, passwordHash)
         maybeUser ← loginInternal(name, passwordHash)
       } yield maybeUser).transact(xa)
     } yield result
   }
 
-  override def resetPassword(name: String, passwordHash: String): IO[Option[BackOfficeUser]] = {
+  override def resetPassword(name: String, passwordHash: String): F[Option[BackOfficeUser]] = {
     for {
       xa ← db.transactor
       result ← (for {
-        _ ← resetPasswordInternal(name, passwordHash)
+        _         ← resetPasswordInternal(name, passwordHash)
         maybeUser ← loginInternal(name, passwordHash)
       } yield maybeUser).transact(xa)
     } yield result
   }
 
   private[hikari] def createInternal(
-    userName: String,
-    password: String,
-    email: Email,
-    phoneNumber: Option[String],
-    firstName: String,
-    middleName: Option[String],
-    lastName: String,
-    description: Option[String],
-    homePage: Option[String],
-    activeLanguage: Option[String],
-    customData: Option[String],
-    roleId: UUID,
-    businessUnitId: UUID,
-    createdBy: String): ConnectionIO[BackOfficeUser] = {
+      userName: String,
+      password: String,
+      email: Email,
+      phoneNumber: Option[String],
+      firstName: String,
+      middleName: Option[String],
+      lastName: String,
+      description: Option[String],
+      homePage: Option[String],
+      activeLanguage: Option[String],
+      customData: Option[String],
+      roleId: UUID,
+      businessUnitId: UUID,
+      createdBy: String
+  ): ConnectionIO[BackOfficeUser] = {
     val id = UUID.randomUUID()
     for {
       _ ← insertQuery(
@@ -268,26 +277,28 @@ class BackOfficeUserHikariDao(
         customData = customData,
         roleId = roleId,
         businessUnitId = businessUnitId,
-        cBy = createdBy).update.run
+        cBy = createdBy
+      ).update.run
       maybeUser ← fetchByIdInternal(id)
     } yield maybeUser
   }
 
   private[hikari] def reactivateInternal(
-    userName: String,
-    password: String,
-    email: Email,
-    phoneNumber: Option[String],
-    firstName: String,
-    middleName: Option[String],
-    lastName: String,
-    description: Option[String],
-    homePage: Option[String],
-    activeLanguage: Option[String],
-    customData: Option[String],
-    roleId: UUID,
-    businessUnitId: UUID,
-    createdBy: String): ConnectionIO[BackOfficeUser] = {
+      userName: String,
+      password: String,
+      email: Email,
+      phoneNumber: Option[String],
+      firstName: String,
+      middleName: Option[String],
+      lastName: String,
+      description: Option[String],
+      homePage: Option[String],
+      activeLanguage: Option[String],
+      customData: Option[String],
+      roleId: UUID,
+      businessUnitId: UUID,
+      createdBy: String
+  ): ConnectionIO[BackOfficeUser] = {
     for {
       maybeExistingUser ← findByNameInternal(userName)
       upsertedUser ← maybeExistingUser.fold {
@@ -305,7 +316,8 @@ class BackOfficeUserHikariDao(
           customData = customData,
           roleId = roleId,
           businessUnitId = businessUnitId,
-          createdBy = createdBy)
+          createdBy = createdBy
+        )
       } { _ ⇒
         for {
           _ ← reactivateQuery(
@@ -322,7 +334,8 @@ class BackOfficeUserHikariDao(
             customData = customData,
             roleId = roleId,
             businessUnitId = businessUnitId,
-            createdBy = createdBy).update.run
+            createdBy = createdBy
+          ).update.run
           reactivatedUser ← fetchByNameInternal(userName)
         } yield reactivatedUser
       }
@@ -338,12 +351,13 @@ class BackOfficeUserHikariDao(
   }
 
   private[hikari] def findAllInternal(
-    maybeLimit: Option[Int],
-    maybeOffset: Option[Int],
-    maybeFirstName: Option[String],
-    maybeLastName: Option[String],
-    maybeEmail: Option[String],
-    maybePhoneNumber: Option[String]): ConnectionIO[PaginatedResult[BackOfficeUser]] = {
+      maybeLimit: Option[Int],
+      maybeOffset: Option[Int],
+      maybeFirstName: Option[String],
+      maybeLastName: Option[String],
+      maybeEmail: Option[String],
+      maybePhoneNumber: Option[String]
+  ): ConnectionIO[PaginatedResult[BackOfficeUser]] = {
     for {
       page ← queryAll(
         maybeLimit,
@@ -351,18 +365,26 @@ class BackOfficeUserHikariDao(
         maybeFirstName = maybeFirstName,
         maybeLastName = maybeLastName,
         maybeEmail = maybeEmail,
-        maybePhoneNumber = maybePhoneNumber).query[BOUserHikari].to[List]
+        maybePhoneNumber = maybePhoneNumber
+      ).query[BOUserHikari].to[List]
       total ← countAll.query[Int].unique
       users ← page.map { user ⇒
-        permissionDao.findAndMergeInternal(
-          businessUnitId = user.businessUnit.id,
-          roleId = user.role.id,
-          maybeUserId = Some(user.id),
-          maybeLimit = None,
-          maybeOffset = None)
+        permissionDao
+          .findAndMergeInternal(
+            businessUnitId = user.businessUnit.id,
+            roleId = user.role.id,
+            maybeUserId = Some(user.id),
+            maybeLimit = None,
+            maybeOffset = None
+          )
           .map(permissionsPage ⇒ user.asDomain(permissionsPage.results))
       }.sequence
-    } yield PaginatedResult(total, users, maybeLimit.getOrElse(Int.MaxValue), maybeOffset.getOrElse(0))
+    } yield PaginatedResult(
+      total,
+      users,
+      maybeLimit.getOrElse(Int.MaxValue),
+      maybeOffset.getOrElse(0)
+    )
   }
 
   private[hikari] def fetchByIdInternal(id: UUID): ConnectionIO[BackOfficeUser] = {
@@ -374,8 +396,9 @@ class BackOfficeUserHikariDao(
   }
 
   private[hikari] def findByNameAndPasswordHashInternal(
-    name: String,
-    hashedPassword: String): ConnectionIO[Option[BackOfficeUser]] = {
+      name: String,
+      hashedPassword: String
+  ): ConnectionIO[Option[BackOfficeUser]] = {
     findOneInternal(queryByNameAndPasswordHash(name, hashedPassword))
   }
 
@@ -388,19 +411,20 @@ class BackOfficeUserHikariDao(
   }
 
   private[hikari] def updateInternal(
-    id: UUID,
-    email: Option[String],
-    phoneNumber: Option[String],
-    firstName: Option[String],
-    middleName: Option[String],
-    lastName: Option[String],
-    description: Option[String],
-    homePage: Option[String],
-    activeLanguage: Option[String],
-    customData: Option[String],
-    roleId: Option[UUID],
-    businessUnitId: Option[UUID],
-    updatedBy: String): ConnectionIO[Option[BackOfficeUser]] = {
+      id: UUID,
+      email: Option[String],
+      phoneNumber: Option[String],
+      firstName: Option[String],
+      middleName: Option[String],
+      lastName: Option[String],
+      description: Option[String],
+      homePage: Option[String],
+      activeLanguage: Option[String],
+      customData: Option[String],
+      roleId: Option[UUID],
+      businessUnitId: Option[UUID],
+      updatedBy: String
+  ): ConnectionIO[Option[BackOfficeUser]] = {
     for {
       _ ← updateQuery(
         id = id,
@@ -415,26 +439,31 @@ class BackOfficeUserHikariDao(
         customData = customData,
         roleId = roleId,
         buId = businessUnitId,
-        updatedBy = updatedBy).update.run
+        updatedBy = updatedBy
+      ).update.run
       maybeUser ← findByIdInternal(id)
     } yield maybeUser
   }
 
   private[hikari] def updateLastLoginTimestampInternal(
-    name: String,
-    passwordHash: String): ConnectionIO[Int] = {
+      name: String,
+      passwordHash: String
+  ): ConnectionIO[Int] = {
     updateLastLoginTimestampQuery(name, passwordHash).update.run
   }
 
   private[hikari] def findOneInternal(qFragment: Fragment): ConnectionIO[Option[BackOfficeUser]] = {
     (for {
       user ← OptionT(qFragment.query[BOUserHikari].option)
-      permissions ← OptionT.liftF(permissionDao.findAndMergeInternal(
-        businessUnitId = user.businessUnit.id,
-        roleId = user.role.id,
-        maybeUserId = Some(user.id),
-        maybeLimit = None,
-        maybeOffset = None))
+      permissions ← OptionT.liftF(
+        permissionDao.findAndMergeInternal(
+          businessUnitId = user.businessUnit.id,
+          roleId = user.role.id,
+          maybeUserId = Some(user.id),
+          maybeLimit = None,
+          maybeOffset = None
+        )
+      )
     } yield user.asDomain(permissions.results)).value
   }
 
@@ -446,21 +475,26 @@ class BackOfficeUserHikariDao(
         roleId = user.role.id,
         maybeUserId = Some(user.id),
         maybeLimit = None,
-        maybeOffset = None)
+        maybeOffset = None
+      )
     } yield user.asDomain(permissions.results)
   }
 
-  private def loginInternal(name: String, passwordHash: String): ConnectionIO[Option[BackOfficeUser]] = {
+  private def loginInternal(
+      name: String,
+      passwordHash: String
+  ): ConnectionIO[Option[BackOfficeUser]] = {
     for {
-      _ ← updateLastLoginTimestampInternal(name, passwordHash)
+      _    ← updateLastLoginTimestampInternal(name, passwordHash)
       user ← findByNameAndPasswordHashInternal(name, passwordHash)
     } yield user
   }
 
   private def updatePasswordInternal(
-    name: String,
-    oldPasswordHash: String,
-    passwordHash: String): ConnectionIO[Int] = {
+      name: String,
+      oldPasswordHash: String,
+      passwordHash: String
+  ): ConnectionIO[Int] = {
     updatePasswordQuery(name, oldPasswordHash, passwordHash).update.run
   }
 
@@ -480,7 +514,8 @@ object BackOfficeUserHikariDao {
         "u.homePage, u.activeLanguage, u.customData, u.lastLoginTimestamp," +
         "r.id, r.name, r.cBy, r.uBy, r.cDate, r.uDate," +
         "bu.id, bu.name, bu.cBy, bu.uBy, bu.cDate, bu.uDate," +
-        "u.cBy, u.uBy, u.cDate, u.uDate FROM ") ++ TableName ++ fr"u" ++
+        "u.cBy, u.uBy, u.cDate, u.uDate FROM "
+    ) ++ TableName ++ fr"u" ++
       fr"INNER JOIN" ++ BusinessUnitHikariDao.TableName ++ fr"bu ON u.businessUnitId = bu.id" ++
       fr"INNER JOIN" ++ RoleHikariDao.TableName ++ fr"r ON u.roleId = r.id"
 
@@ -505,41 +540,43 @@ object BackOfficeUserHikariDao {
     fr"WHERE u.userName = $name AND u.password = $pwdHash AND u.status = 1;"
 
   def insertQuery(
-    id: UUID,
-    userName: String,
-    password: String,
-    email: Email,
-    phoneNumber: Option[String],
-    firstName: String,
-    middleName: Option[String],
-    lastName: String,
-    description: Option[String],
-    homePage: Option[String],
-    activeLanguage: Option[String],
-    customData: Option[String],
-    roleId: UUID,
-    businessUnitId: UUID,
-    cBy: String): Fragment = {
+      id: UUID,
+      userName: String,
+      password: String,
+      email: Email,
+      phoneNumber: Option[String],
+      firstName: String,
+      middleName: Option[String],
+      lastName: String,
+      description: Option[String],
+      homePage: Option[String],
+      activeLanguage: Option[String],
+      customData: Option[String],
+      roleId: UUID,
+      businessUnitId: UUID,
+      cBy: String
+  ): Fragment = {
     val emailValue = email.value
     InsertIntoTable ++ fr"($id, $userName, $password, $emailValue, $phoneNumber, $firstName, $middleName, $lastName," ++
       fr"$description, $homePage, 1, $activeLanguage, NULL, $customData, $roleId, $businessUnitId, $cBy, $cBy)"
   }
 
   def reactivateQuery(
-    userName: String,
-    password: String,
-    email: Email,
-    phoneNumber: Option[String],
-    firstName: String,
-    middleName: Option[String],
-    lastName: String,
-    description: Option[String],
-    homePage: Option[String],
-    activeLanguage: Option[String],
-    customData: Option[String],
-    roleId: UUID,
-    businessUnitId: UUID,
-    createdBy: String): Fragment = {
+      userName: String,
+      password: String,
+      email: Email,
+      phoneNumber: Option[String],
+      firstName: String,
+      middleName: Option[String],
+      lastName: String,
+      description: Option[String],
+      homePage: Option[String],
+      activeLanguage: Option[String],
+      customData: Option[String],
+      roleId: UUID,
+      businessUnitId: UUID,
+      createdBy: String
+  ): Fragment = {
     val emailV = email.value
     // lastLoginTimestamp left unchanged because user is not created from scratch. This might be changed if needed
     UpdateTable ++ fr"SET password = $password, email = $emailV, phoneNumber = $phoneNumber, firstName = $firstName," ++
@@ -556,13 +593,14 @@ object BackOfficeUserHikariDao {
     SelectFromTable ++ whereUserNameAndPasswordAndActive(name, pwdHash)
 
   def queryAll(
-    maybeLimit: Option[Int],
-    maybeOffset: Option[Int],
-    maybeFirstName: Option[String],
-    maybeLastName: Option[String],
-    maybeEmail: Option[String],
-    maybePhoneNumber: Option[String]): Fragment = {
-    val limit = maybeLimit.fold(EmptyFragment)(lmt ⇒ fr"LIMIT $lmt")
+      maybeLimit: Option[Int],
+      maybeOffset: Option[Int],
+      maybeFirstName: Option[String],
+      maybeLastName: Option[String],
+      maybeEmail: Option[String],
+      maybePhoneNumber: Option[String]
+  ): Fragment = {
+    val limit  = maybeLimit.fold(EmptyFragment)(lmt ⇒ fr"LIMIT $lmt")
     val offset = maybeOffset.fold(EmptyFragment)(off ⇒ fr"OFFSET $off")
     SelectFromTable ++ fr"WHERE u.status = 1" ++ limit ++ offset
   }
@@ -570,19 +608,20 @@ object BackOfficeUserHikariDao {
   def countAll: Fragment = SelectCountFromTable ++ fr"WHERE status = 1"
 
   def updateQuery(
-    id: UUID,
-    email: Option[String],
-    phoneNumber: Option[String],
-    firstName: Option[String],
-    middleName: Option[String],
-    lastName: Option[String],
-    description: Option[String],
-    homePage: Option[String],
-    activeLanguage: Option[String],
-    customData: Option[String],
-    roleId: Option[UUID],
-    buId: Option[UUID],
-    updatedBy: String): Fragment = {
+      id: UUID,
+      email: Option[String],
+      phoneNumber: Option[String],
+      firstName: Option[String],
+      middleName: Option[String],
+      lastName: Option[String],
+      description: Option[String],
+      homePage: Option[String],
+      activeLanguage: Option[String],
+      customData: Option[String],
+      roleId: Option[UUID],
+      buId: Option[UUID],
+      updatedBy: String
+  ): Fragment = {
     val updStatementsBuffer = new ArrayBuffer[Fragment]()
     email.foreach(e ⇒ updStatementsBuffer += fr"u.email = $e,")
     phoneNumber.foreach(pn ⇒ updStatementsBuffer += fr"u.phoneNumber = $pn,")
@@ -601,11 +640,17 @@ object BackOfficeUserHikariDao {
 
   def updateLastLoginTimestampQuery(name: String, pwdHash: String): Fragment = {
     val now = System.currentTimeMillis
-    UpdateTable ++ fr"u SET u.lastLoginTimestamp = $now" ++ whereUserNameAndPasswordAndActive(name, pwdHash)
+    UpdateTable ++ fr"u SET u.lastLoginTimestamp = $now" ++ whereUserNameAndPasswordAndActive(
+      name,
+      pwdHash
+    )
   }
 
   def updatePasswordQuery(name: String, oldPwdHash: String, pwdHash: String): Fragment = {
-    UpdateTable ++ fr"u SET u.password = $pwdHash" ++ whereUserNameAndPasswordAndActive(name, oldPwdHash)
+    UpdateTable ++ fr"u SET u.password = $pwdHash" ++ whereUserNameAndPasswordAndActive(
+      name,
+      oldPwdHash
+    )
   }
 
   def resetPasswordQuery(name: String, pwdHash: String): Fragment = {
@@ -634,7 +679,8 @@ object BackOfficeUserHikariDao {
       createdBy: String,
       updatedBy: String,
       createdTime: ZonedDateTime,
-      updatedTime: ZonedDateTime)
+      updatedTime: ZonedDateTime
+  )
 
   implicit class BOUserHikariOps(val u: BOUserHikari) extends AnyVal {
     def asDomain(permissions: Seq[Permission]) =
@@ -657,6 +703,7 @@ object BackOfficeUserHikariDao {
         createdBy = u.createdBy,
         updatedBy = u.updatedBy,
         createdTime = u.createdTime,
-        updatedTime = u.updatedTime)
+        updatedTime = u.updatedTime
+      )
   }
 }

@@ -1,20 +1,22 @@
 package io.dlinov.auth.domain.algebras.services
 
 import cats.data.EitherT
-import cats.effect.{ContextShift, IO, Resource}
+import cats.effect.{Concurrent, Resource}
 import org.http4s.Uri
 import org.http4s.client.Client
 import org.http4s.client.middleware.{FollowRedirect, Logger}
 import io.dlinov.auth.domain.BaseService.ServiceResponse
-import io.dlinov.auth.domain.ServiceError
 import io.dlinov.auth.AppConfig.{AuthConfig, LogConfig}
 import io.dlinov.auth.domain.{BaseService, ServiceError}
 
-class CaptchaService(
+class CaptchaService[F[_]](
     config: AuthConfig,
     loggerConfig: LogConfig,
-    httpClient: Resource[IO, Client[IO]])(implicit contextShift: ContextShift[IO])
-  extends BaseService {
+    httpClient: Resource[F, Client[F]]
+)(
+    implicit
+    concF: Concurrent[F]
+) extends BaseService {
 
   private val recaptchaSecret: String = config.recaptchaSecret
 
@@ -22,10 +24,10 @@ class CaptchaService(
     .fromString(config.recaptchaUrl)
     .map(_.withQueryParam("secret", recaptchaSecret))
 
-  private def wrapLogic[T](logic: Client[IO] ⇒ IO[T]): IO[T] = httpClient.use { client ⇒
-    val followingRedirectsClient = FollowRedirect[IO](3)(client)
+  private def wrapLogic[T](logic: Client[F] ⇒ F[T]): F[T] = httpClient.use { client ⇒
+    val followingRedirectsClient = FollowRedirect[F](3)(client)
     val wrappedClient = if (loggerConfig.isEnabled) {
-      Logger[IO](logHeaders = loggerConfig.logHeaders, logBody = loggerConfig.logBody) {
+      Logger[F](logHeaders = loggerConfig.logHeaders, logBody = loggerConfig.logBody) {
         followingRedirectsClient
       }
     } else {
@@ -34,19 +36,24 @@ class CaptchaService(
     logic(wrappedClient)
   }
 
-  def checkCaptcha[T](captcha: String): IO[ServiceResponse[Unit]] = {
+  def checkCaptcha[T](captcha: String): F[ServiceResponse[Unit]] = {
     (for {
-      uri ← EitherT(IO(baseRecaptchaUri.map(_.withQueryParam("response", captcha))))
-        .leftMap(failure ⇒ ServiceError.invalidConfigError(s"Recaptcha url is invalid: ${failure.message}"))
+      uri ← EitherT(concF.delay(baseRecaptchaUri.map(_.withQueryParam("response", captcha))))
+        .leftMap(
+          failure ⇒ ServiceError.invalidConfigError(s"Recaptcha url is invalid: ${failure.message}")
+        )
       resp ← EitherT {
         wrapLogic(httpClient ⇒ {
-          httpClient.get(uri)(r ⇒ IO {
-            if (r.status.isSuccess) {
-              Right(())
-            } else {
-              Left(ServiceError.invalidCaptchaError("Invalid captcha"))
-            }
-          })
+          httpClient.get(uri)(
+            r ⇒
+              concF.delay {
+                if (r.status.isSuccess) {
+                  Right(())
+                } else {
+                  Left(ServiceError.invalidCaptchaError("Invalid captcha"))
+                }
+              }
+          )
         })
       }
     } yield resp).value
