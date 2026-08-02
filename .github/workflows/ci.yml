@@ -31,6 +31,13 @@ jobs:
       - name: Set up sbt
         uses: sbt/setup-sbt@v1
 
+      - name: Generate test signing keys
+        run: |
+          openssl genpkey -algorithm EC -pkeyopt ec_paramgen_curve:P-256 \
+            -out src/test/resources/auth.key
+          openssl pkey -in src/test/resources/auth.key -pubout \
+            -out src/test/resources/auth.key.pub
+
       - name: Test with coverage
         run: sbt "clean ; coverage ; testOnly * ; coverageReport"
 
