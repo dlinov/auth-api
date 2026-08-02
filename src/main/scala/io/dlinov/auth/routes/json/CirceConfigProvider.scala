@@ -1,6 +1,6 @@
 package io.dlinov.auth.routes.json
 
-import io.circe.generic.extras.Configuration
+import io.circe.derivation.Configuration
 
 trait CirceConfigProvider {
   implicit val config: Configuration

@@ -2,11 +2,8 @@ package io.dlinov.auth.routes.proxied
 
 import io.dlinov.auth.AuthorizationBehavior
 import io.dlinov.auth.domain.auth.entities.BackOfficeUser
-import io.dlinov.auth.routes.AuthenticatedRoutes
-import org.http4s.Request
-import org.http4s.rho.RhoRoutes
-import io.dlinov.auth.AuthorizationBehavior
-import io.dlinov.auth.routes.AuthenticatedRoutes
+import io.dlinov.auth.routes.{AuthenticatedRoutes, Routes}
+import org.http4s.AuthedRoutes
 
 trait ProxiedRoute[F[_]]
     extends AuthenticatedRoutes[F]
@@ -15,26 +12,21 @@ trait ProxiedRoute[F[_]]
 
   protected val routeRoot: String
 
-  override def routes: RhoRoutes[F] = new RhoRoutes[F] {
-    GET / `routeRoot` / * >>>
-      authCtx.auth |>> { (req: Request[F], _: List[String], user: BackOfficeUser) ⇒
-      proxyAuthedRequest(requireReadAccess)(req, user)
-    }
+  private def isUnderRoot(path: org.http4s.Uri.Path): Boolean =
+    Routes.isPathUnderRoot(routeRoot)(path)
 
-    POST / `routeRoot` / * >>>
-      authCtx.auth |>> { (req: Request[F], _: List[String], user: BackOfficeUser) ⇒
-      proxyAuthedRequest(requireCreateAccess)(req, user)
-    }
+  override def routes: AuthedRoutes[BackOfficeUser, F] = AuthedRoutes.of {
+    case req @ GET -> path as user if isUnderRoot(path) =>
+      proxyAuthedRequest(requireReadAccess)(req.req, user)
 
-    PUT / `routeRoot` / * >>>
-      authCtx.auth |>> { (req: Request[F], _: List[String], user: BackOfficeUser) ⇒
-      proxyAuthedRequest(requireUpdateAccess)(req, user)
-    }
+    case req @ POST -> path as user if isUnderRoot(path) =>
+      proxyAuthedRequest(requireCreateAccess)(req.req, user)
 
-    DELETE / `routeRoot` / * >>>
-      authCtx.auth |>> { (req: Request[F], _: List[String], user: BackOfficeUser) ⇒
-      proxyAuthedRequest(requireDeleteAccess)(req, user)
-    }
+    case req @ PUT -> path as user if isUnderRoot(path) =>
+      proxyAuthedRequest(requireUpdateAccess)(req.req, user)
+
+    case req @ DELETE -> path as user if isUnderRoot(path) =>
+      proxyAuthedRequest(requireDeleteAccess)(req.req, user)
   }
 
 }

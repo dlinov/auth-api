@@ -3,7 +3,6 @@ package io.dlinov.auth.domain.customer.model
 import java.time.LocalDateTime
 import java.util.UUID
 
-import io.dlinov.auth.domain.auth.entities.BackOfficeUser
 import CustomerAttributes._
 import io.dlinov.auth.domain.auth.entities.{BackOfficeUser, Email}
 

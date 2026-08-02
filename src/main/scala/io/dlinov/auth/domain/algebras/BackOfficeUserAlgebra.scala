@@ -5,10 +5,6 @@ import java.util.UUID
 import cats.Monad
 import cats.data.EitherT
 import cats.syntax.functor._
-import io.dlinov.auth.dao.generic.BackOfficeUserFDao
-import io.dlinov.auth.domain.{BaseService, PaginatedResult}
-import io.dlinov.auth.domain.algebras.services.NotificationService
-import io.dlinov.auth.domain.auth.entities.{BackOfficeUser, Email, Notifications}
 import io.dlinov.auth.domain.{BaseService, PaginatedResult}
 import io.dlinov.auth.domain.auth.entities.{BackOfficeUser, Email, Notifications}
 import io.dlinov.auth.domain.algebras.services.NotificationService
@@ -40,11 +36,11 @@ class BackOfficeUserAlgebra[F[_]: Monad](
       maybeReactivate: Option[Boolean]
   ): F[ServiceResponse[BackOfficeUser]] = {
     (for {
-      _ ← EitherT(roleAlgebra.findById(roleId))
-      _ ← EitherT(businessUnitAlgebra.findById(businessUnitId))
+      _ <- EitherT(roleAlgebra.findById(roleId))
+      _ <- EitherT(businessUnitAlgebra.findById(businessUnitId))
       generatedPassword = passwordAlgebra.generatePassword
       passwordHash      = passwordAlgebra.hashPassword(generatedPassword)
-      user ← EitherT(
+      user <- EitherT(
         dao
           .create(
             userName = userName,
@@ -66,20 +62,20 @@ class BackOfficeUserAlgebra[F[_]: Monad](
           .map(_.asServiceResponse)
       )
       // TODO: send notification in async way
-      _ ← EitherT(emailPassword(generatedPassword, user))
+      _ <- EitherT(emailPassword(generatedPassword, user))
     } yield user).value
   }
 
   def findById(id: UUID): F[ServiceResponse[BackOfficeUser]] = {
     for {
-      maybeUserOrError ← dao.findById(id)
+      maybeUserOrError <- dao.findById(id)
     } yield maybeUserOrError.asServiceResponse
       .flatMap(_.toRight(notFoundEntityError(s"User with id '$id' was not found")))
   }
 
   def findByName(name: String): F[ServiceResponse[BackOfficeUser]] = {
     for {
-      userOrError ← dao.findByName(name)
+      userOrError <- dao.findByName(name)
     } yield userOrError.asServiceResponse
       .flatMap(_.toRight(notFoundEntityError(s"User with name '$name' was not found")))
   }
@@ -93,7 +89,7 @@ class BackOfficeUserAlgebra[F[_]: Monad](
       maybePhoneNumber: Option[String]
   ): F[ServiceResponse[PaginatedResult[BackOfficeUser]]] = {
     for {
-      usersOrError ← dao.findAll(
+      usersOrError <- dao.findAll(
         maybeLimit = maybeLimit,
         maybeOffset = maybeOffset,
         maybeFirstName = maybeFirstName,
@@ -120,7 +116,7 @@ class BackOfficeUserAlgebra[F[_]: Monad](
       updatedBy: String
   ): F[ServiceResponse[BackOfficeUser]] = {
     for {
-      updatedUser ← dao.update(
+      updatedUser <- dao.update(
         id = id,
         email = email.map(_.value),
         phoneNumber = phoneNumber,
@@ -141,14 +137,14 @@ class BackOfficeUserAlgebra[F[_]: Monad](
 
   def remove(id: UUID, updatedBy: String): F[ServiceResponse[UUID]] = {
     for {
-      maybeUser ← dao.remove(id, updatedBy)
+      maybeUser <- dao.remove(id, updatedBy)
     } yield maybeUser.asServiceResponse
       .flatMap(_.map(_.id).toRight(notFoundEntityError(s"User with id '$id' was not found")))
   }
 
   def login(name: String, passwordHash: String): F[ServiceResponse[BackOfficeUser]] = {
     for {
-      userOrError ← dao.login(name, passwordHash)
+      userOrError <- dao.login(name, passwordHash)
     } yield userOrError.toRight(notAuthorizedError(s"Wrong credentials for user $name"))
   }
 
@@ -158,7 +154,7 @@ class BackOfficeUserAlgebra[F[_]: Monad](
       passwordHash: String
   ): F[ServiceResponse[BackOfficeUser]] = {
     for {
-      maybeUser ← dao.updatePassword(name, oldPasswordHash, passwordHash)
+      maybeUser <- dao.updatePassword(name, oldPasswordHash, passwordHash)
     } yield maybeUser.toRight(
       notAuthorizedError(s"Failed to update password for user $name. Check credentials")
     )
@@ -166,7 +162,7 @@ class BackOfficeUserAlgebra[F[_]: Monad](
 
   def resetPassword(name: String, passwordHash: String): F[ServiceResponse[BackOfficeUser]] = {
     for {
-      maybeUser ← dao.resetPassword(name, passwordHash)
+      maybeUser <- dao.resetPassword(name, passwordHash)
     } yield maybeUser.toRight(
       notAuthorizedError(s"Failed to reset password for user '$name'. Check if user exists")
     )
@@ -178,7 +174,7 @@ class BackOfficeUserAlgebra[F[_]: Monad](
   ): F[ServiceResponse[Unit]] = {
     val topic         = "Backoffice credentials"
     val recipientName = s"${user.firstName} ${user.lastName}"
-    val message =
+    val message       =
       s"""Hello $recipientName,
          |
          |Your registration was successful.

@@ -2,7 +2,6 @@ package io.dlinov.auth.domain.auth.entities
 
 import java.time.ZonedDateTime
 
-import io.dlinov.auth.routes.dto.PermissionKey
 import io.dlinov.auth.dao.Dao.EntityId
 import io.dlinov.auth.routes.dto.PermissionKey
 

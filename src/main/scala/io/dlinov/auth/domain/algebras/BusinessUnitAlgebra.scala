@@ -5,9 +5,6 @@ import java.util.UUID
 import cats.Monad
 import cats.data.EitherT
 import cats.syntax.functor._
-import io.dlinov.auth.dao.generic.{BackOfficeUserFDao, BusinessUnitFDao}
-import io.dlinov.auth.domain.{BaseService, PaginatedResult, ServiceError}
-import io.dlinov.auth.domain.auth.entities.BusinessUnit
 import io.dlinov.auth.domain.{BaseService, PaginatedResult, ServiceError}
 import io.dlinov.auth.domain.auth.entities.BusinessUnit
 import io.dlinov.auth.dao.generic.{BackOfficeUserFDao, BusinessUnitFDao}
@@ -23,13 +20,13 @@ class BusinessUnitAlgebra[F[_]: Monad](dao: BusinessUnitFDao[F], userDao: BackOf
   ): F[ServiceResponse[BusinessUnit]] = {
     val reactivate = maybeReactivate.getOrElse(false)
     for {
-      buOrError ← dao.create(name, createdBy, reactivate)
+      buOrError <- dao.create(name, createdBy, reactivate)
     } yield buOrError.asServiceResponse
   }
 
   def findById(id: UUID): F[ServiceResponse[BusinessUnit]] = {
     for {
-      maybeBusinessUnit ← dao.findById(id)
+      maybeBusinessUnit <- dao.findById(id)
     } yield maybeBusinessUnit.asServiceResponse
       .flatMap(
         _.toRight(ServiceError.notFoundEntityError(s"Business unit id='$id' couldn't be found"))
@@ -41,13 +38,13 @@ class BusinessUnitAlgebra[F[_]: Monad](dao: BusinessUnitFDao[F], userDao: BackOf
       maybeOffset: Option[Int]
   ): F[ServiceResponse[PaginatedResult[BusinessUnit]]] = {
     for {
-      buListOrError ← dao.findAll(maybeLimit, maybeOffset)
+      buListOrError <- dao.findAll(maybeLimit, maybeOffset)
     } yield buListOrError.asServiceResponse
   }
 
   def update(id: UUID, name: String, updatedBy: String): F[ServiceResponse[BusinessUnit]] = {
     for {
-      maybeBusinessUnitOrError ← dao.update(id, name, updatedBy)
+      maybeBusinessUnitOrError <- dao.update(id, name, updatedBy)
     } yield maybeBusinessUnitOrError.asServiceResponse
       .flatMap(
         _.toRight(ServiceError.notFoundEntityError(s"Business unit id='$id' couldn't be found"))
@@ -56,15 +53,18 @@ class BusinessUnitAlgebra[F[_]: Monad](dao: BusinessUnitFDao[F], userDao: BackOf
 
   def remove(id: UUID, updatedBy: String): F[ServiceResponse[UUID]] = {
     val buIdOrError = for {
-      activeUsersCount ← EitherT(userDao.countActiveByBusinessUnitId(id).map(_.asServiceResponse))
-      maybeBusinessUnitOrError ← if (activeUsersCount == 0) {
-        EitherT(dao.remove(id, updatedBy).map(_.asServiceResponse))
-      } else {
-        EitherT.leftT[F, Option[BusinessUnit]] {
-          validationError(s"There is still $activeUsersCount active user(s) of this business unit")
+      activeUsersCount <- EitherT(userDao.countActiveByBusinessUnitId(id).map(_.asServiceResponse))
+      maybeBusinessUnitOrError <-
+        if (activeUsersCount == 0) {
+          EitherT(dao.remove(id, updatedBy).map(_.asServiceResponse))
+        } else {
+          EitherT.leftT[F, Option[BusinessUnit]] {
+            validationError(
+              s"There is still $activeUsersCount active user(s) of this business unit"
+            )
+          }
         }
-      }
-      buOrError ← EitherT.fromOption[F](
+      buOrError <- EitherT.fromOption[F](
         maybeBusinessUnitOrError,
         notFoundEntityError(s"Scope id='$id' couldn't be found")
       )

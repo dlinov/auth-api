@@ -4,10 +4,6 @@ import java.util.UUID
 
 import cats.Functor
 import cats.syntax.functor._
-import io.dlinov.auth.dao.generic.PermissionFDao
-import io.dlinov.auth.domain.auth.entities.Permission
-import io.dlinov.auth.domain.{BaseService, PaginatedResult, ServiceError}
-import io.dlinov.auth.routes.dto.{PermissionBlueprint, PermissionKey}
 import io.dlinov.auth.domain.{BaseService, PaginatedResult, ServiceError}
 import io.dlinov.auth.domain.auth.entities.Permission
 import io.dlinov.auth.dao.generic.PermissionFDao
@@ -22,7 +18,7 @@ class PermissionAlgebra[F[_]: Functor](dao: PermissionFDao[F]) extends BaseServi
   ): F[ServiceResponse[Permission]] = {
     val reactivate = maybeReactivate.getOrElse(false)
     for {
-      pOrError ← dao.create(p.pKey, p.scopeId, p.revoke, p.createdBy, reactivate)
+      pOrError <- dao.create(p.pKey, p.scopeId, p.revoke, p.createdBy, reactivate)
     } yield pOrError.asServiceResponse
   }
 
@@ -34,7 +30,7 @@ class PermissionAlgebra[F[_]: Functor](dao: PermissionFDao[F]) extends BaseServi
       maybeOffset: Option[Int]
   ): F[ServiceResponse[PaginatedResult[Permission]]] = {
     for {
-      permissions ← dao.findAndMerge(buId, rId, uId, maybeLimit, maybeOffset)
+      permissions <- dao.findAndMerge(buId, rId, uId, maybeLimit, maybeOffset)
     } yield permissions.asServiceResponse
   }
 
@@ -45,7 +41,7 @@ class PermissionAlgebra[F[_]: Functor](dao: PermissionFDao[F]) extends BaseServi
       updatedBy: String
   ): F[ServiceResponse[Permission]] = {
     for {
-      maybePermissionOrError ← dao.update(id, mbPermissionKey, mbScopeId, updatedBy)
+      maybePermissionOrError <- dao.update(id, mbPermissionKey, mbScopeId, updatedBy)
     } yield maybePermissionOrError.asServiceResponse
       .flatMap(
         _.toRight(ServiceError.notFoundEntityError(s"Permission id='$id' couldn't be found"))
@@ -54,7 +50,7 @@ class PermissionAlgebra[F[_]: Functor](dao: PermissionFDao[F]) extends BaseServi
 
   def remove(id: UUID, updatedBy: String): F[ServiceResponse[UUID]] = {
     for {
-      maybePermissionOrError ← dao.remove(id, updatedBy)
+      maybePermissionOrError <- dao.remove(id, updatedBy)
     } yield maybePermissionOrError.asServiceResponse
       .flatMap(
         _.map(_.id)

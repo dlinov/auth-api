@@ -10,7 +10,6 @@ import io.dlinov.auth.domain.customer.model.CardApplicationAttributes.{
   NewCardApplicationDetails
 }
 import io.dlinov.auth.domain.customer.model.CustomerAttributes._
-import io.dlinov.auth.domain.customer.model._
 
 import scala.concurrent.Future
 
@@ -23,12 +22,12 @@ trait CustomerRegistration {
       tier: Option[CustomerTier],
       subscription: Option[CustomerSubscription],
       newCardApplicationDetails: Option[NewCardApplicationDetails]
-  )(
-      implicit doneByBackOfficeUser: BackOfficeUser
+  )(implicit
+      doneByBackOfficeUser: BackOfficeUser
   ): Future[ServiceResponse[RegisteredButNotActivatedBusinessUser]]
 
-  def createDefaultBusinessUserAccount(user: RegisteredButNotActivatedBusinessUser)(
-      implicit doneByBackOfficeUser: BackOfficeUser
+  def createDefaultBusinessUserAccount(user: RegisteredButNotActivatedBusinessUser)(implicit
+      doneByBackOfficeUser: BackOfficeUser
   ): Future[ServiceResponse[Account]]
 
   def createCardApplication(

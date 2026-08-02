@@ -3,19 +3,17 @@ package io.dlinov.auth.domain.algebras
 import java.util.Base64
 
 import io.dlinov.auth.{AppConfig, PasswordBehavior}
-import javax.xml.bind.DatatypeConverter
 import org.apache.commons.codec.digest.{HmacAlgorithms, HmacUtils}
-import io.dlinov.auth.PasswordBehavior
 
 class PasswordAlgebra(config: AppConfig) extends PasswordBehavior {
 
-  private lazy val authConfig   = config.auth
-  private lazy val pwdGenConfig = authConfig.passwordGeneration
+  private lazy val authConfig        = config.auth
+  private lazy val pwdGenConfig      = authConfig.passwordGeneration
   private lazy val secretKey: String =
     Base64.getEncoder.encodeToString(authConfig.secret.reverse.getBytes)
   private lazy val hmacUtils = new HmacUtils(HmacAlgorithms.HMAC_SHA_256, secretKey)
 
-  override protected lazy val defaultPassword: String = authConfig.passwordGeneration.default
+  override protected val defaultPassword: String = authConfig.passwordGeneration.default
 
   override lazy val nDigits: Int             = pwdGenConfig.nDigits
   override lazy val nLowercase: Int          = pwdGenConfig.nLowercase
@@ -28,6 +26,9 @@ class PasswordAlgebra(config: AppConfig) extends PasswordBehavior {
 
   def hashPassword(password: String): String = {
     val hashed: Array[Byte] = hmacUtils.hmac(password)
-    DatatypeConverter.printHexBinary(hashed)
+    // javax.xml.bind.DatatypeConverter (used here previously) was removed from the JDK in
+    // Java 11+; replicate its printHexBinary behaviour (uppercase, 2 hex digits per byte, no
+    // separators) manually to keep existing password hashes valid.
+    hashed.map(b => f"${b & 0xff}%02X").mkString
   }
 }

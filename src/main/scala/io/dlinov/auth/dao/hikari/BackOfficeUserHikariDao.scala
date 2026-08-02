@@ -4,27 +4,21 @@ import java.time.ZonedDateTime
 import java.util.UUID
 
 import cats.data.OptionT
-import cats.effect.Effect
-import cats.instances.list._
+import cats.effect.Async
 import cats.syntax.either._
 import cats.syntax.flatMap._
 import cats.syntax.functor._
-import cats.syntax.traverse._
 import doobie._
 import doobie.implicits._
-import io.dlinov.auth.dao.DBFApi
-import io.dlinov.auth.dao.generic.BackOfficeUserFDao
-import io.dlinov.auth.domain.PaginatedResult
 import io.dlinov.auth.domain.auth.entities.{BackOfficeUser, BusinessUnit, Email, Permission, Role}
 import io.dlinov.auth.dao.Dao.DaoResponse
-import io.dlinov.auth.domain.auth.entities._
 import io.dlinov.auth.dao.DBFApi
 import io.dlinov.auth.dao.generic.BackOfficeUserFDao
 import io.dlinov.auth.domain.PaginatedResult
 
 import scala.collection.mutable.ArrayBuffer
 
-class BackOfficeUserHikariDao[F[_]: Effect](db: DBFApi[F], permissionDao: PermissionHikariDao[F])
+class BackOfficeUserHikariDao[F[_]: Async](db: DBFApi[F], permissionDao: PermissionHikariDao[F])
     extends BackOfficeUserFDao[F] {
 
   import HikariDBFApi._
@@ -48,43 +42,43 @@ class BackOfficeUserHikariDao[F[_]: Effect](db: DBFApi[F], permissionDao: Permis
       reactivate: Boolean
   ): F[DaoResponse[BackOfficeUser]] = {
     for {
-      xa ← db.transactor
-      result ← (if (reactivate) {
-                  reactivateInternal(
-                    userName = userName,
-                    password = password,
-                    email = email,
-                    phoneNumber = phoneNumber,
-                    firstName = firstName,
-                    middleName = middleName,
-                    lastName = lastName,
-                    description = description,
-                    homePage = homePage,
-                    activeLanguage = activeLanguage,
-                    customData = customData,
-                    roleId = roleId,
-                    businessUnitId = businessUnitId,
-                    createdBy = createdBy
-                  )
-                } else {
-                  createInternal(
-                    userName = userName,
-                    password = password,
-                    email = email,
-                    phoneNumber = phoneNumber,
-                    firstName = firstName,
-                    middleName = middleName,
-                    lastName = lastName,
-                    description = description,
-                    homePage = homePage,
-                    activeLanguage = activeLanguage,
-                    customData = customData,
-                    roleId = roleId,
-                    businessUnitId = businessUnitId,
-                    createdBy = createdBy
-                  )
-                }).transact(xa).attemptSql
-    } yield result.leftMap { exc ⇒
+      xa     <- db.transactor
+      result <- (if (reactivate) {
+                   reactivateInternal(
+                     userName = userName,
+                     password = password,
+                     email = email,
+                     phoneNumber = phoneNumber,
+                     firstName = firstName,
+                     middleName = middleName,
+                     lastName = lastName,
+                     description = description,
+                     homePage = homePage,
+                     activeLanguage = activeLanguage,
+                     customData = customData,
+                     roleId = roleId,
+                     businessUnitId = businessUnitId,
+                     createdBy = createdBy
+                   )
+                 } else {
+                   createInternal(
+                     userName = userName,
+                     password = password,
+                     email = email,
+                     phoneNumber = phoneNumber,
+                     firstName = firstName,
+                     middleName = middleName,
+                     lastName = lastName,
+                     description = description,
+                     homePage = homePage,
+                     activeLanguage = activeLanguage,
+                     customData = customData,
+                     roleId = roleId,
+                     businessUnitId = businessUnitId,
+                     createdBy = createdBy
+                   )
+                 }).transact(xa).attemptSql
+    } yield result.leftMap { exc =>
       val msg = s"Unexpected error in .create($userName,..): " + exc.getMessage
       logger.warn(msg, exc)
       genericDbError(msg)
@@ -93,9 +87,9 @@ class BackOfficeUserHikariDao[F[_]: Effect](db: DBFApi[F], permissionDao: Permis
 
   override def findById(id: UUID): F[DaoResponse[Option[BackOfficeUser]]] = {
     for {
-      xa     ← db.transactor
-      result ← findByIdInternal(id).transact(xa).attemptSql
-    } yield result.leftMap { exc ⇒
+      xa     <- db.transactor
+      result <- findByIdInternal(id).transact(xa).attemptSql
+    } yield result.leftMap { exc =>
       val msg = s"Unexpected error in .findById($id): " + exc.getMessage
       logger.warn(msg, exc)
       genericDbError(msg)
@@ -104,9 +98,9 @@ class BackOfficeUserHikariDao[F[_]: Effect](db: DBFApi[F], permissionDao: Permis
 
   override def findByName(name: String): F[DaoResponse[Option[BackOfficeUser]]] = {
     for {
-      xa     ← db.transactor
-      result ← findByNameInternal(name).transact(xa).attemptSql
-    } yield result.leftMap { exc ⇒
+      xa     <- db.transactor
+      result <- findByNameInternal(name).transact(xa).attemptSql
+    } yield result.leftMap { exc =>
       val msg = s"Unexpected error in .findByName($name): " + exc.getMessage
       logger.warn(msg, exc)
       genericDbError(msg)
@@ -122,8 +116,8 @@ class BackOfficeUserHikariDao[F[_]: Effect](db: DBFApi[F], permissionDao: Permis
       maybePhoneNumber: Option[String]
   ): F[DaoResponse[PaginatedResult[BackOfficeUser]]] = {
     for {
-      xa ← db.transactor
-      result ← findAllInternal(
+      xa     <- db.transactor
+      result <- findAllInternal(
         maybeLimit = maybeLimit,
         maybeOffset = maybeOffset,
         maybeFirstName = maybeFirstName,
@@ -131,7 +125,7 @@ class BackOfficeUserHikariDao[F[_]: Effect](db: DBFApi[F], permissionDao: Permis
         maybeEmail = maybeEmail,
         maybePhoneNumber = maybePhoneNumber
       ).transact(xa).attemptSql
-    } yield result.leftMap { exc ⇒
+    } yield result.leftMap { exc =>
       val msg = s"Unexpected error in .findAll: " + exc.getMessage
       logger.warn(msg, exc)
       genericDbError(msg)
@@ -140,9 +134,9 @@ class BackOfficeUserHikariDao[F[_]: Effect](db: DBFApi[F], permissionDao: Permis
 
   override def countActiveByRoleId(roleId: UUID): F[DaoResponse[Int]] = {
     for {
-      xa     ← db.transactor
-      result ← countActiveByRoleIdInternal(roleId).transact(xa).attemptSql
-    } yield result.leftMap { exc ⇒
+      xa     <- db.transactor
+      result <- countActiveByRoleIdInternal(roleId).transact(xa).attemptSql
+    } yield result.leftMap { exc =>
       val msg = s"Unexpected error in .countActiveByRoleId($roleId): " + exc.getMessage
       logger.warn(msg, exc)
       genericDbError(msg)
@@ -151,9 +145,9 @@ class BackOfficeUserHikariDao[F[_]: Effect](db: DBFApi[F], permissionDao: Permis
 
   override def countActiveByBusinessUnitId(buId: UUID): F[DaoResponse[Int]] = {
     for {
-      xa     ← db.transactor
-      result ← countActiveByBusinessUnitIdInternal(buId).transact(xa).attemptSql
-    } yield result.leftMap { exc ⇒
+      xa     <- db.transactor
+      result <- countActiveByBusinessUnitIdInternal(buId).transact(xa).attemptSql
+    } yield result.leftMap { exc =>
       val msg = s"Unexpected error in .countActiveByBusinessUnitId($buId): " + exc.getMessage
       logger.warn(msg, exc)
       genericDbError(msg)
@@ -176,8 +170,8 @@ class BackOfficeUserHikariDao[F[_]: Effect](db: DBFApi[F], permissionDao: Permis
       updatedBy: String
   ): F[DaoResponse[Option[BackOfficeUser]]] = {
     for {
-      xa ← db.transactor
-      result ← updateInternal(
+      xa     <- db.transactor
+      result <- updateInternal(
         id = id,
         email = email,
         phoneNumber = phoneNumber,
@@ -192,7 +186,7 @@ class BackOfficeUserHikariDao[F[_]: Effect](db: DBFApi[F], permissionDao: Permis
         businessUnitId = businessUnitId,
         updatedBy = updatedBy
       ).transact(xa).attemptSql
-    } yield result.leftMap { exc ⇒
+    } yield result.leftMap { exc =>
       val msg = s"Unexpected error in .update($id,..): " + exc.getMessage
       logger.warn(msg, exc)
       genericDbError(msg)
@@ -201,12 +195,12 @@ class BackOfficeUserHikariDao[F[_]: Effect](db: DBFApi[F], permissionDao: Permis
 
   def remove(id: UUID, updatedBy: String): F[DaoResponse[Option[BackOfficeUser]]] = {
     for {
-      xa ← db.transactor
-      maybeUser ← (for {
-        user ← OptionT(findByIdInternal(id))
-        _    ← OptionT.liftF(removeQuery(id, updatedBy).update.run)
+      xa        <- db.transactor
+      maybeUser <- (for {
+        user <- OptionT(findByIdInternal(id))
+        _    <- OptionT.liftF(removeQuery(id, updatedBy).update.run)
       } yield user).value.transact(xa).attemptSql
-    } yield maybeUser.leftMap { exc ⇒
+    } yield maybeUser.leftMap { exc =>
       val msg = s"Unexpected error in .remove($id, $updatedBy): " + exc.getMessage
       logger.warn(msg, exc)
       genericDbError(msg)
@@ -215,8 +209,8 @@ class BackOfficeUserHikariDao[F[_]: Effect](db: DBFApi[F], permissionDao: Permis
 
   override def login(name: String, passwordHash: String): F[Option[BackOfficeUser]] = {
     for {
-      xa     ← db.transactor
-      result ← loginInternal(name, passwordHash).transact(xa)
+      xa     <- db.transactor
+      result <- loginInternal(name, passwordHash).transact(xa)
     } yield result
   }
 
@@ -226,20 +220,20 @@ class BackOfficeUserHikariDao[F[_]: Effect](db: DBFApi[F], permissionDao: Permis
       passwordHash: String
   ): F[Option[BackOfficeUser]] = {
     for {
-      xa ← db.transactor
-      result ← (for {
-        _         ← updatePasswordInternal(name, oldPasswordHash, passwordHash)
-        maybeUser ← loginInternal(name, passwordHash)
+      xa     <- db.transactor
+      result <- (for {
+        _         <- updatePasswordInternal(name, oldPasswordHash, passwordHash)
+        maybeUser <- loginInternal(name, passwordHash)
       } yield maybeUser).transact(xa)
     } yield result
   }
 
   override def resetPassword(name: String, passwordHash: String): F[Option[BackOfficeUser]] = {
     for {
-      xa ← db.transactor
-      result ← (for {
-        _         ← resetPasswordInternal(name, passwordHash)
-        maybeUser ← loginInternal(name, passwordHash)
+      xa     <- db.transactor
+      result <- (for {
+        _         <- resetPasswordInternal(name, passwordHash)
+        maybeUser <- loginInternal(name, passwordHash)
       } yield maybeUser).transact(xa)
     } yield result
   }
@@ -262,7 +256,7 @@ class BackOfficeUserHikariDao[F[_]: Effect](db: DBFApi[F], permissionDao: Permis
   ): ConnectionIO[BackOfficeUser] = {
     val id = UUID.randomUUID()
     for {
-      _ ← insertQuery(
+      _ <- insertQuery(
         id = id,
         userName = userName,
         password = password,
@@ -279,7 +273,7 @@ class BackOfficeUserHikariDao[F[_]: Effect](db: DBFApi[F], permissionDao: Permis
         businessUnitId = businessUnitId,
         cBy = createdBy
       ).update.run
-      maybeUser ← fetchByIdInternal(id)
+      maybeUser <- fetchByIdInternal(id)
     } yield maybeUser
   }
 
@@ -300,8 +294,8 @@ class BackOfficeUserHikariDao[F[_]: Effect](db: DBFApi[F], permissionDao: Permis
       createdBy: String
   ): ConnectionIO[BackOfficeUser] = {
     for {
-      maybeExistingUser ← findByNameInternal(userName)
-      upsertedUser ← maybeExistingUser.fold {
+      maybeExistingUser <- findByNameInternal(userName)
+      upsertedUser      <- maybeExistingUser.fold {
         createInternal(
           userName = userName,
           password = password,
@@ -318,9 +312,9 @@ class BackOfficeUserHikariDao[F[_]: Effect](db: DBFApi[F], permissionDao: Permis
           businessUnitId = businessUnitId,
           createdBy = createdBy
         )
-      } { _ ⇒
+      } { _ =>
         for {
-          _ ← reactivateQuery(
+          _ <- reactivateQuery(
             userName = userName,
             password = password,
             email = email,
@@ -336,7 +330,7 @@ class BackOfficeUserHikariDao[F[_]: Effect](db: DBFApi[F], permissionDao: Permis
             businessUnitId = businessUnitId,
             createdBy = createdBy
           ).update.run
-          reactivatedUser ← fetchByNameInternal(userName)
+          reactivatedUser <- fetchByNameInternal(userName)
         } yield reactivatedUser
       }
     } yield upsertedUser
@@ -359,7 +353,7 @@ class BackOfficeUserHikariDao[F[_]: Effect](db: DBFApi[F], permissionDao: Permis
       maybePhoneNumber: Option[String]
   ): ConnectionIO[PaginatedResult[BackOfficeUser]] = {
     for {
-      page ← queryAll(
+      page <- queryAll(
         maybeLimit,
         maybeOffset,
         maybeFirstName = maybeFirstName,
@@ -367,18 +361,18 @@ class BackOfficeUserHikariDao[F[_]: Effect](db: DBFApi[F], permissionDao: Permis
         maybeEmail = maybeEmail,
         maybePhoneNumber = maybePhoneNumber
       ).query[BOUserHikari].to[List]
-      total ← countAll.query[Int].unique
-      users ← page.map { user ⇒
-        permissionDao
-          .findAndMergeInternal(
-            businessUnitId = user.businessUnit.id,
-            roleId = user.role.id,
-            maybeUserId = Some(user.id),
-            maybeLimit = None,
-            maybeOffset = None
-          )
-          .map(permissionsPage ⇒ user.asDomain(permissionsPage.results))
-      }.sequence
+      total <- countAll(
+        maybeFirstName = maybeFirstName,
+        maybeLastName = maybeLastName,
+        maybeEmail = maybeEmail,
+        maybePhoneNumber = maybePhoneNumber
+      ).query[Int].unique
+      // Batched in a flat pair of queries (regardless of page size) rather than one
+      // permissionDao round-trip per row, to avoid an N+1 query pattern for paged listings.
+      permissionsByUser <- permissionDao.findManyAndMergeInternal(
+        page.map(user => (user.id, user.businessUnit.id, user.role.id))
+      )
+      users = page.map(user => user.asDomain(permissionsByUser.getOrElse(user.id, Nil)))
     } yield PaginatedResult(
       total,
       users,
@@ -403,11 +397,11 @@ class BackOfficeUserHikariDao[F[_]: Effect](db: DBFApi[F], permissionDao: Permis
   }
 
   private[hikari] def countActiveByRoleIdInternal(roleId: UUID): doobie.ConnectionIO[Int] = {
-    (countAll ++ fr"AND roleId = $roleId").query[Int].unique
+    (countAll() ++ fr"AND u.roleId = $roleId").query[Int].unique
   }
 
   private[hikari] def countActiveByBusinessUnitIdInternal(buId: UUID): doobie.ConnectionIO[Int] = {
-    (countAll ++ fr"AND businessUnitId = $buId").query[Int].unique
+    (countAll() ++ fr"AND u.businessUnitId = $buId").query[Int].unique
   }
 
   private[hikari] def updateInternal(
@@ -426,7 +420,7 @@ class BackOfficeUserHikariDao[F[_]: Effect](db: DBFApi[F], permissionDao: Permis
       updatedBy: String
   ): ConnectionIO[Option[BackOfficeUser]] = {
     for {
-      _ ← updateQuery(
+      _ <- updateQuery(
         id = id,
         email = email,
         phoneNumber = phoneNumber,
@@ -441,7 +435,7 @@ class BackOfficeUserHikariDao[F[_]: Effect](db: DBFApi[F], permissionDao: Permis
         buId = businessUnitId,
         updatedBy = updatedBy
       ).update.run
-      maybeUser ← findByIdInternal(id)
+      maybeUser <- findByIdInternal(id)
     } yield maybeUser
   }
 
@@ -454,8 +448,8 @@ class BackOfficeUserHikariDao[F[_]: Effect](db: DBFApi[F], permissionDao: Permis
 
   private[hikari] def findOneInternal(qFragment: Fragment): ConnectionIO[Option[BackOfficeUser]] = {
     (for {
-      user ← OptionT(qFragment.query[BOUserHikari].option)
-      permissions ← OptionT.liftF(
+      user        <- OptionT(qFragment.query[BOUserHikari].option)
+      permissions <- OptionT.liftF(
         permissionDao.findAndMergeInternal(
           businessUnitId = user.businessUnit.id,
           roleId = user.role.id,
@@ -469,8 +463,8 @@ class BackOfficeUserHikariDao[F[_]: Effect](db: DBFApi[F], permissionDao: Permis
 
   private[hikari] def fetchOneInternal(qFragment: Fragment): ConnectionIO[BackOfficeUser] = {
     for {
-      user ← qFragment.query[BOUserHikari].unique
-      permissions ← permissionDao.findAndMergeInternal(
+      user        <- qFragment.query[BOUserHikari].unique
+      permissions <- permissionDao.findAndMergeInternal(
         businessUnitId = user.businessUnit.id,
         roleId = user.role.id,
         maybeUserId = Some(user.id),
@@ -485,8 +479,8 @@ class BackOfficeUserHikariDao[F[_]: Effect](db: DBFApi[F], permissionDao: Permis
       passwordHash: String
   ): ConnectionIO[Option[BackOfficeUser]] = {
     for {
-      _    ← updateLastLoginTimestampInternal(name, passwordHash)
-      user ← findByNameAndPasswordHashInternal(name, passwordHash)
+      _    <- updateLastLoginTimestampInternal(name, passwordHash)
+      user <- findByNameAndPasswordHashInternal(name, passwordHash)
     } yield user
   }
 
@@ -519,7 +513,8 @@ object BackOfficeUserHikariDao {
       fr"INNER JOIN" ++ BusinessUnitHikariDao.TableName ++ fr"bu ON u.businessUnitId = bu.id" ++
       fr"INNER JOIN" ++ RoleHikariDao.TableName ++ fr"r ON u.roleId = r.id"
 
-  val SelectCountFromTable: Fragment = Fragment.const("SELECT COUNT(id) FROM ") ++ TableName
+  val SelectCountFromTable: Fragment =
+    Fragment.const("SELECT COUNT(id) FROM ") ++ TableName ++ fr"u"
 
   val InsertIntoTable: Fragment = fr"INSERT INTO" ++ TableName ++
     fr"(id, userName, password, email, phoneNumber, firstName, middleName, lastName, description, homePage, status," ++
@@ -600,12 +595,45 @@ object BackOfficeUserHikariDao {
       maybeEmail: Option[String],
       maybePhoneNumber: Option[String]
   ): Fragment = {
-    val limit  = maybeLimit.fold(EmptyFragment)(lmt ⇒ fr"LIMIT $lmt")
-    val offset = maybeOffset.fold(EmptyFragment)(off ⇒ fr"OFFSET $off")
-    SelectFromTable ++ fr"WHERE u.status = 1" ++ limit ++ offset
+    val limit  = maybeLimit.fold(EmptyFragment)(lmt => fr"LIMIT $lmt")
+    val offset = maybeOffset.fold(EmptyFragment)(off => fr"OFFSET $off")
+    SelectFromTable ++ userFilters(
+      maybeFirstName,
+      maybeLastName,
+      maybeEmail,
+      maybePhoneNumber
+    ) ++ limit ++ offset
   }
 
-  def countAll: Fragment = SelectCountFromTable ++ fr"WHERE status = 1"
+  def countAll(
+      maybeFirstName: Option[String] = None,
+      maybeLastName: Option[String] = None,
+      maybeEmail: Option[String] = None,
+      maybePhoneNumber: Option[String] = None
+  ): Fragment =
+    SelectCountFromTable ++ userFilters(
+      maybeFirstName,
+      maybeLastName,
+      maybeEmail,
+      maybePhoneNumber
+    )
+
+  private def userFilters(
+      maybeFirstName: Option[String],
+      maybeLastName: Option[String],
+      maybeEmail: Option[String],
+      maybePhoneNumber: Option[String]
+  ): Fragment = {
+    def contains(value: String): String = s"%$value%"
+
+    Fragments.whereAndOpt(
+      Some(fr"u.status = 1"),
+      maybeFirstName.map(value => fr"u.firstName LIKE ${contains(value)}"),
+      maybeLastName.map(value => fr"u.lastName LIKE ${contains(value)}"),
+      maybeEmail.map(value => fr"u.email LIKE ${contains(value)}"),
+      maybePhoneNumber.map(value => fr"u.phoneNumber LIKE ${contains(value)}")
+    )
+  }
 
   def updateQuery(
       id: UUID,
@@ -623,17 +651,17 @@ object BackOfficeUserHikariDao {
       updatedBy: String
   ): Fragment = {
     val updStatementsBuffer = new ArrayBuffer[Fragment]()
-    email.foreach(e ⇒ updStatementsBuffer += fr"u.email = $e,")
-    phoneNumber.foreach(pn ⇒ updStatementsBuffer += fr"u.phoneNumber = $pn,")
-    firstName.foreach(fn ⇒ updStatementsBuffer += fr"u.firstName = $fn,")
-    middleName.foreach(mn ⇒ updStatementsBuffer += fr"u.middleName = $mn,")
-    lastName.foreach(ln ⇒ updStatementsBuffer += fr"u.lastName = $ln,")
-    description.foreach(d ⇒ updStatementsBuffer += fr"u.description = $d,")
-    homePage.foreach(hp ⇒ updStatementsBuffer += fr"u.homePage = $hp,")
-    activeLanguage.foreach(al ⇒ updStatementsBuffer += fr"u.activeLanguage = $al,")
-    customData.foreach(cd ⇒ updStatementsBuffer += fr"u.customData = $cd,")
-    roleId.foreach(r ⇒ updStatementsBuffer += fr"u.roleId = $r,")
-    buId.foreach(bu ⇒ updStatementsBuffer += fr"u.businessUnitId = $bu,")
+    email.foreach(e => updStatementsBuffer += fr"u.email = $e,")
+    phoneNumber.foreach(pn => updStatementsBuffer += fr"u.phoneNumber = $pn,")
+    firstName.foreach(fn => updStatementsBuffer += fr"u.firstName = $fn,")
+    middleName.foreach(mn => updStatementsBuffer += fr"u.middleName = $mn,")
+    lastName.foreach(ln => updStatementsBuffer += fr"u.lastName = $ln,")
+    description.foreach(d => updStatementsBuffer += fr"u.description = $d,")
+    homePage.foreach(hp => updStatementsBuffer += fr"u.homePage = $hp,")
+    activeLanguage.foreach(al => updStatementsBuffer += fr"u.activeLanguage = $al,")
+    customData.foreach(cd => updStatementsBuffer += fr"u.customData = $cd,")
+    roleId.foreach(r => updStatementsBuffer += fr"u.roleId = $r,")
+    buId.foreach(bu => updStatementsBuffer += fr"u.businessUnitId = $bu,")
     val updStatements = updStatementsBuffer.foldLeft(fr"u SET")(_ ++ _) ++ fr"u.uBy = $updatedBy"
     UpdateTable ++ updStatements ++ whereIdAndActive(id)
   }

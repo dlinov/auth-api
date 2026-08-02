@@ -4,8 +4,6 @@ import java.util.UUID
 
 import cats.Monad
 import cats.syntax.functor._
-import io.dlinov.auth.dao.generic.ScopeFDao
-import io.dlinov.auth.domain.{BaseService, PaginatedResult, ServiceError}
 import io.dlinov.auth.domain.auth.entities.Scope
 import io.dlinov.auth.domain.{BaseService, PaginatedResult, ServiceError}
 import io.dlinov.auth.domain.BaseService._
@@ -22,13 +20,13 @@ class ScopeAlgebra[F[_]: Monad](scopeDao: ScopeFDao[F]) extends BaseService {
   ): F[ServiceResponse[Scope]] = {
     val reactivate = maybeReactivate.getOrElse(false)
     for {
-      scopeOrError ← scopeDao.create(name, parentId, description, createdBy, reactivate)
+      scopeOrError <- scopeDao.create(name, parentId, description, createdBy, reactivate)
     } yield scopeOrError.asServiceResponse
   }
 
   def findById(id: UUID): F[ServiceResponse[Scope]] = {
     for {
-      maybeScope ← scopeDao.findById(id)
+      maybeScope <- scopeDao.findById(id)
     } yield maybeScope.asServiceResponse
       .flatMap(_.toRight(ServiceError.notFoundEntityError(s"Scope id='$id' couldn't be found")))
   }
@@ -38,7 +36,7 @@ class ScopeAlgebra[F[_]: Monad](scopeDao: ScopeFDao[F]) extends BaseService {
       maybeOffset: Option[Int]
   ): F[ServiceResponse[PaginatedResult[Scope]]] = {
     for {
-      scopesOrError ← scopeDao.findAll(maybeLimit, maybeOffset)
+      scopesOrError <- scopeDao.findAll(maybeLimit, maybeOffset)
     } yield scopesOrError.asServiceResponse
   }
 
@@ -48,14 +46,14 @@ class ScopeAlgebra[F[_]: Monad](scopeDao: ScopeFDao[F]) extends BaseService {
       updatedBy: String
   ): F[ServiceResponse[Scope]] = {
     for {
-      scopeOrError ← scopeDao.update(id, description, updatedBy)
+      scopeOrError <- scopeDao.update(id, description, updatedBy)
     } yield scopeOrError.asServiceResponse
       .flatMap(_.toRight(ServiceError.notFoundEntityError(s"Scope id='$id' couldn't be found")))
   }
 
   def remove(id: UUID, uBy: String): F[ServiceResponse[UUID]] = {
     for {
-      maybeScope ← scopeDao.remove(id, uBy)
+      maybeScope <- scopeDao.remove(id, uBy)
     } yield maybeScope.asServiceResponse
       .flatMap(_.toRight(ServiceError.notFoundEntityError(s"Scope id='$id' couldn't be found")))
   }

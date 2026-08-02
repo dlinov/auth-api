@@ -2,23 +2,19 @@ package io.dlinov.auth.dao.hikari
 
 import java.util.UUID
 
-import cats.effect.Effect
+import cats.effect.Async
 import cats.syntax.either._
 import cats.syntax.flatMap._
 import cats.syntax.functor._
 import doobie._
 import doobie.implicits._
-import io.dlinov.auth.dao.DBFApi
-import io.dlinov.auth.dao.generic.BusinessUnitFDao
-import io.dlinov.auth.domain.PaginatedResult
-import io.dlinov.auth.domain.auth.entities.BusinessUnit
 import io.dlinov.auth.dao.Dao.DaoResponse
 import io.dlinov.auth.domain.auth.entities.BusinessUnit
 import io.dlinov.auth.dao.DBFApi
 import io.dlinov.auth.dao.generic.BusinessUnitFDao
 import io.dlinov.auth.domain.PaginatedResult
 
-class BusinessUnitHikariDao[F[_]: Effect](db: DBFApi[F]) extends BusinessUnitFDao[F] {
+class BusinessUnitHikariDao[F[_]: Async](db: DBFApi[F]) extends BusinessUnitFDao[F] {
 
   import HikariDBFApi._
   import BusinessUnitHikariDao._
@@ -29,13 +25,13 @@ class BusinessUnitHikariDao[F[_]: Effect](db: DBFApi[F]) extends BusinessUnitFDa
       reactivate: Boolean
   ): F[DaoResponse[BusinessUnit]] = {
     for {
-      xa ← db.transactor
-      result ← (if (reactivate) {
-                  reactivateInternal(name, createdBy)
-                } else {
-                  createInternal(name, createdBy)
-                }).transact[F](xa).attemptSql
-    } yield result.leftMap { exc ⇒
+      xa     <- db.transactor
+      result <- (if (reactivate) {
+                   reactivateInternal(name, createdBy)
+                 } else {
+                   createInternal(name, createdBy)
+                 }).transact[F](xa).attemptSql
+    } yield result.leftMap { exc =>
       val msg = s"Unexpected error in .create($name,..): " + exc.getMessage
       logger.warn(msg, exc)
       genericDbError(msg)
@@ -44,9 +40,9 @@ class BusinessUnitHikariDao[F[_]: Effect](db: DBFApi[F]) extends BusinessUnitFDa
 
   override def findById(id: UUID): F[DaoResponse[Option[BusinessUnit]]] = {
     for {
-      xa     ← db.transactor
-      result ← findByIdInternal(id).transact[F](xa).attemptSql
-    } yield result.leftMap { exc ⇒
+      xa     <- db.transactor
+      result <- findByIdInternal(id).transact[F](xa).attemptSql
+    } yield result.leftMap { exc =>
       val msg = s"Unexpected error in .findById($id): " + exc.getMessage
       logger.warn(msg, exc)
       genericDbError(msg)
@@ -58,9 +54,9 @@ class BusinessUnitHikariDao[F[_]: Effect](db: DBFApi[F]) extends BusinessUnitFDa
       maybeOffset: Option[Int]
   ): F[DaoResponse[PaginatedResult[BusinessUnit]]] = {
     for {
-      xa     ← db.transactor
-      result ← findAllInternal(maybeLimit, maybeOffset).transact[F](xa).attemptSql
-    } yield result.leftMap { exc ⇒
+      xa     <- db.transactor
+      result <- findAllInternal(maybeLimit, maybeOffset).transact[F](xa).attemptSql
+    } yield result.leftMap { exc =>
       val msg = s"Unexpected error in .findAll: " + exc.getMessage
       logger.warn(msg, exc)
       genericDbError(msg)
@@ -73,12 +69,12 @@ class BusinessUnitHikariDao[F[_]: Effect](db: DBFApi[F]) extends BusinessUnitFDa
       updatedBy: String
   ): F[DaoResponse[Option[BusinessUnit]]] = {
     for {
-      xa ← db.transactor
-      result ← (for {
-        _                 ← updateQuery(id, name, updatedBy).update.run
-        maybeBusinessUnit ← findByIdInternal(id)
+      xa     <- db.transactor
+      result <- (for {
+        _                 <- updateQuery(id, name, updatedBy).update.run
+        maybeBusinessUnit <- findByIdInternal(id)
       } yield maybeBusinessUnit).transact[F](xa).attemptSql
-    } yield result.leftMap { exc ⇒
+    } yield result.leftMap { exc =>
       val msg = s"Unexpected error in .update($id, $name, $updatedBy): " + exc.getMessage
       logger.warn(msg, exc)
       genericDbError(msg)
@@ -87,12 +83,12 @@ class BusinessUnitHikariDao[F[_]: Effect](db: DBFApi[F]) extends BusinessUnitFDa
 
   override def remove(id: UUID, updatedBy: String): F[DaoResponse[Option[BusinessUnit]]] = {
     for {
-      xa ← db.transactor
-      result ← (for {
-        maybeBusinessUnit ← findByIdInternal(id)
-        _                 ← removeQuery(id, updatedBy).update.run
+      xa     <- db.transactor
+      result <- (for {
+        maybeBusinessUnit <- findByIdInternal(id)
+        _                 <- removeQuery(id, updatedBy).update.run
       } yield maybeBusinessUnit).transact[F](xa).attemptSql
-    } yield result.leftMap { exc ⇒
+    } yield result.leftMap { exc =>
       val msg = s"Unexpected error in .remove($id, $updatedBy): " + exc.getMessage
       logger.warn(msg, exc)
       genericDbError(msg)
@@ -116,10 +112,10 @@ class BusinessUnitHikariDao[F[_]: Effect](db: DBFApi[F]) extends BusinessUnitFDa
       maybeOffset: Option[Int]
   ): ConnectionIO[PaginatedResult[BusinessUnit]] = {
     for {
-      page ← queryAll(maybeLimit, maybeOffset)
+      page <- queryAll(maybeLimit, maybeOffset)
         .query[BusinessUnit]
         .to[List]
-      total ← countAll.query[Int].unique
+      total <- countAll.query[Int].unique
     } yield PaginatedResult(
       total,
       page,
@@ -141,8 +137,8 @@ class BusinessUnitHikariDao[F[_]: Effect](db: DBFApi[F]) extends BusinessUnitFDa
   ): ConnectionIO[BusinessUnit] = {
     val id = UUID.randomUUID()
     for {
-      _  ← insertQuery(id, name, createdBy).update.run
-      bu ← fetchByIdInternal(id)
+      _  <- insertQuery(id, name, createdBy).update.run
+      bu <- fetchByIdInternal(id)
     } yield bu
   }
 
@@ -151,13 +147,13 @@ class BusinessUnitHikariDao[F[_]: Effect](db: DBFApi[F]) extends BusinessUnitFDa
       createdBy: String
   ): ConnectionIO[BusinessUnit] = {
     for {
-      maybeExistingBusinessUnit ← findByNameInternal(name)
-      reactivated ← maybeExistingBusinessUnit.fold {
+      maybeExistingBusinessUnit <- findByNameInternal(name)
+      reactivated               <- maybeExistingBusinessUnit.fold {
         createInternal(name, createdBy)
-      } { existing ⇒
+      } { existing =>
         for {
-          _  ← reactivateQuery(existing.id, name, createdBy).update.run
-          bu ← fetchByIdInternal(existing.id)
+          _  <- reactivateQuery(existing.id, name, createdBy).update.run
+          bu <- fetchByIdInternal(existing.id)
         } yield bu
       }
     } yield reactivated
@@ -191,8 +187,8 @@ object BusinessUnitHikariDao {
     SelectFromTable ++ fr"WHERE name = $name and status = 1;"
 
   def queryAll(maybeLimit: Option[Int], maybeOffset: Option[Int]): Fragment = {
-    val limit  = maybeLimit.fold(EmptyFragment)(lmt ⇒ fr"LIMIT $lmt")
-    val offset = maybeOffset.fold(EmptyFragment)(off ⇒ fr"OFFSET $off")
+    val limit  = maybeLimit.fold(EmptyFragment)(lmt => fr"LIMIT $lmt")
+    val offset = maybeOffset.fold(EmptyFragment)(off => fr"OFFSET $off")
     SelectFromTable ++ fr"WHERE status = 1" ++ limit ++ offset
   }
 

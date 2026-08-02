@@ -2,9 +2,6 @@ package io.dlinov.auth.dao.generic
 
 import java.util.UUID
 
-import io.dlinov.auth.dao.Dao
-import io.dlinov.auth.domain.PaginatedResult
-import io.dlinov.auth.domain.auth.entities.Role
 import io.dlinov.auth.dao.Dao.DaoResponse
 import io.dlinov.auth.domain.auth.entities.Role
 import io.dlinov.auth.dao.Dao

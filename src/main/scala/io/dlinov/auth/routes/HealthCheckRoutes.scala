@@ -3,49 +3,35 @@ package io.dlinov.auth.routes
 import java.time.{ZoneOffset, ZonedDateTime}
 
 import cats.Applicative
-import cats.effect.Sync
-import org.http4s.Uri
-import org.http4s.rho.RhoRoutes
+import cats.effect.Async
+import org.http4s.{HttpRoutes, Uri}
+import org.http4s.headers.Location
 import io.dlinov.auth.BuildInfo
 import HealthCheckRoutes.HealthInfo
-import io.dlinov.auth.AuthenticationMiddlewareProvider
 import io.dlinov.auth.routes.json.EntityEncoders
-import org.http4s.rho.swagger.SwaggerSupport
 
-class HealthCheckRoutes[F[_]](implicit override val syncF: Sync[F])
-    extends SwaggerSupport[F]
-    with Routes[F]
+class HealthCheckRoutes[F[_]](implicit override val asyncF: Async[F])
+    extends Routes[F]
     with EntityEncoders[F] {
-  implicit override protected def applicativeF: Applicative[F] = syncF
+  implicit override protected def applicativeF: Applicative[F] = asyncF
 
-  private val swaggerLink =
-    s"/swagger-ui/${BuildInfo.swaggerVersion}/index.html?url=%2Fswagger.json"
-  private val anonSwaggerLink =
-    s"/swagger-ui/${BuildInfo.swaggerVersion}/index.html?url=%2F${AuthenticationMiddlewareProvider.SwaggerAnonPath}"
+  val routes: HttpRoutes[F] = HttpRoutes.of[F] {
+    case GET -> Root =>
+      TemporaryRedirect(Location(Uri.unsafeFromString("/health")))
 
-  override val routes: RhoRoutes[F] = new RhoRoutes[F] {
-    GET |>>
-      TemporaryRedirect(Uri(path = swaggerLink))
-
-    "Check app health status" **
-      GET / "health" |>> {
-      val now = ZonedDateTime.now.withZoneSameInstant(ZoneOffset.UTC)
+    case GET -> Root / "health" =>
+      val now     = ZonedDateTime.now.withZoneSameInstant(ZoneOffset.UTC)
       val message = HealthInfo(
         serverTime = now,
-        build = BuildInfo.version,
-        swagger = swaggerLink,
-        anonymousSwagger = anonSwaggerLink
+        build = BuildInfo.version
       )
       Ok(message)
-    }
   }
 }
 
 object HealthCheckRoutes {
   case class HealthInfo(
       serverTime: ZonedDateTime,
-      build: String,
-      swagger: String,
-      anonymousSwagger: String
+      build: String
   )
 }

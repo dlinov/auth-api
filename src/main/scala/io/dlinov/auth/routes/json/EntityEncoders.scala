@@ -1,8 +1,6 @@
 package io.dlinov.auth.routes.json
 
 import cats.Applicative
-import io.dlinov.auth.domain.auth.entities.{ClaimContent, Email}
-import io.dlinov.auth.routes.HealthCheckRoutes.HealthInfo
 import io.dlinov.auth.routes.dto.{
   ApiError,
   BackOfficeUserToCreate,
@@ -19,7 +17,6 @@ import io.dlinov.auth.routes.dto.{
   PermissionToCreate,
   PermissionToRead,
   PermissionToUpdate,
-  ResetPasswordLinkRequest,
   RoleToCreate,
   RoleToRead,
   RoleToUpdate,
@@ -31,7 +28,7 @@ import org.http4s.EntityEncoder
 import org.http4s.circe.jsonEncoderOf
 import io.dlinov.auth.domain.auth.entities.{ClaimContent, Email}
 import io.dlinov.auth.routes.HealthCheckRoutes.HealthInfo
-import io.dlinov.auth.routes.dto.{ResetPasswordLinkRequest, _}
+import io.dlinov.auth.routes.dto.ResetPasswordLinkRequest
 
 trait EntityEncoders[F[_]] {
   import CirceEncoders._

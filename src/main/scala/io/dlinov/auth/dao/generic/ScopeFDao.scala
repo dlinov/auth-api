@@ -2,15 +2,12 @@ package io.dlinov.auth.dao.generic
 
 import java.util.UUID
 
-import io.dlinov.auth.dao.Dao
-import io.dlinov.auth.domain.PaginatedResult
-import io.dlinov.auth.domain.auth.entities.Scope
 import io.dlinov.auth.dao.Dao.DaoResponse
 import io.dlinov.auth.domain.auth.entities.Scope
 import io.dlinov.auth.dao.Dao
 import io.dlinov.auth.domain.PaginatedResult
 
-abstract class ScopeFDao[F[_]: cats.Monad] extends Dao {
+abstract class ScopeFDao[F[_]] extends Dao {
   def create(
       name: String,
       parentId: Option[UUID],

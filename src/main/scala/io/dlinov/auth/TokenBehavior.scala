@@ -10,6 +10,7 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider
 import pdi.jwt._
 
 import scala.concurrent.duration._
+import scala.util.Using
 
 trait TokenBehavior {
   import TokenBehavior.{epochSecondsNow, Issuer}
@@ -26,7 +27,7 @@ trait TokenBehavior {
     val header     = JwtHeader(TokenBehavior.Algo, typ = "JWT")
     val now        = epochSecondsNow
     val expiration = now + tokenExpirationInMinutes.minutes.toSeconds
-    val claim = JwtClaim(
+    val claim      = JwtClaim(
       content = payload,
       issuer = Some(Issuer),
       audience = Some(Set(user)),
@@ -48,11 +49,11 @@ object TokenBehavior {
   private val Algo = JwtAlgorithm.ES256
 
   if (Security.getProvider(Provider) == null) {
-    Security.addProvider(new BouncyCastleProvider())
+    val _ = Security.addProvider(new BouncyCastleProvider())
   }
 
   final lazy val AuthPublicKey: PublicKey = {
-    val key  = scala.io.Source.fromResource("auth.key.pub").mkString
+    val key  = Using.resource(scala.io.Source.fromResource("auth.key.pub"))(_.mkString)
     val spec = new X509EncodedKeySpec(parseKey(key))
     KeyFactory.getInstance(AlgoString, Provider).generatePublic(spec)
   }
@@ -60,7 +61,7 @@ object TokenBehavior {
   def epochSecondsNow: Long = Instant.now().getEpochSecond
 
   final private lazy val AuthPrivateKey: PrivateKey = {
-    val key  = scala.io.Source.fromResource("auth.key").mkString
+    val key  = Using.resource(scala.io.Source.fromResource("auth.key"))(_.mkString)
     val spec = new PKCS8EncodedKeySpec(parseKey(key))
     KeyFactory.getInstance(AlgoString, Provider).generatePrivate(spec)
   }

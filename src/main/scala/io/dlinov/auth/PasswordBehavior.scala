@@ -36,11 +36,11 @@ trait PasswordBehavior {
       password: String
   ): Either[NonEmptyList[String], String] = {
     Some(password) match {
-      case `oldPassword` ⇒
+      case `oldPassword` =>
         Left(NonEmptyList.one("New password cannot be the same as old password"))
-      case Some(`defaultPassword`) ⇒
+      case Some(`defaultPassword`) =>
         Left(NonEmptyList.one("New password cannot be the same as default password"))
-      case _ ⇒
+      case _ =>
         val errors = validatePassword(password)
         NonEmptyList.fromList(errors).toLeft(password)
     }

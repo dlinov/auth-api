@@ -9,7 +9,7 @@ object Implicits {
     }
   }
 
-  private val replaceAll = (arg: String) ⇒ {
+  private val replaceAll = (arg: String) => {
     arg
       .replace("""'""", "")
       .replace(""""""", "")

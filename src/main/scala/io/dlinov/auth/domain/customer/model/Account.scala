@@ -3,7 +3,6 @@ package io.dlinov.auth.domain.customer.model
 import java.time.LocalDateTime
 import java.util.{Currency, UUID}
 
-import io.dlinov.auth.domain.auth.entities.BackOfficeUser
 import io.dlinov.auth.domain.customer.model.CustomerAttributes.{
   AccountNumber,
   AccountStatus,
@@ -11,7 +10,6 @@ import io.dlinov.auth.domain.customer.model.CustomerAttributes.{
   NameAttribute
 }
 import io.dlinov.auth.domain.auth.entities.BackOfficeUser
-import io.dlinov.auth.domain.customer.model.CustomerAttributes._
 
 case class Account(
     id: UUID,

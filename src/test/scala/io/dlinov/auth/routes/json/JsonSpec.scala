@@ -5,12 +5,11 @@ import java.util.UUID
 import CirceDecoders._
 import CirceEncoders._
 import io.circe.Json
-import io.dlinov.auth.routes.dto.{BackOfficeUserToUpdate, PermissionKeys}
-import org.scalatest.MustMatchers
+import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
 import io.dlinov.auth.routes.dto.{BackOfficeUserToUpdate, PermissionKeys}
 
-class JsonSpec extends AnyWordSpecLike with MustMatchers {
+class JsonSpec extends AnyWordSpecLike with Matchers {
 
   "Json entity encoders/decoders" should {
     "encode/decode BackOfficeUserToUpdate" in {

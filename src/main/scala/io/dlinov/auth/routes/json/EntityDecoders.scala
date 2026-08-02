@@ -1,10 +1,8 @@
 package io.dlinov.auth.routes.json
 
-import cats.effect.Sync
+import cats.effect.Async
 import org.http4s.EntityDecoder
 import PimpedCirce.jsonOf
-import io.dlinov.auth.domain.PaginatedResult
-import io.dlinov.auth.domain.auth.entities.ClaimContent
 import io.dlinov.auth.domain.PaginatedResult
 import io.dlinov.auth.domain.auth.entities.ClaimContent
 import io.dlinov.auth.routes.dto._
@@ -12,11 +10,11 @@ import io.dlinov.auth.routes.dto._
 trait EntityDecoders[F[_]] {
   import CirceDecoders._
 
-  implicit protected def syncF: Sync[F]
+  implicit protected def asyncF: Async[F]
 
   implicit val scopeToCreateEntityDecoder: EntityDecoder[F, ScopeToCreate] =
     jsonOf[F, ScopeToCreate]
-  implicit val scopeToReadEntityDecoder: EntityDecoder[F, ScopeToRead] = jsonOf[F, ScopeToRead]
+  implicit val scopeToReadEntityDecoder: EntityDecoder[F, ScopeToRead]     = jsonOf[F, ScopeToRead]
   implicit val scopeToUpdateEntityDecoder: EntityDecoder[F, ScopeToUpdate] =
     jsonOf[F, ScopeToUpdate]
   implicit val apiErrorEntityDecoder: EntityDecoder[F, ApiError] = jsonOf[F, ApiError]
@@ -66,9 +64,6 @@ trait EntityDecoders[F[_]] {
   implicit val loginStatusResponseEntityDecoder: EntityDecoder[F, LoginStatusResponse] =
     jsonOf[F, LoginStatusResponse]
   implicit val claimContentEntityDecoder: EntityDecoder[F, ClaimContent] = jsonOf[F, ClaimContent]
-
-  implicit val documentToCreateEntityDecoder: EntityDecoder[F, DocumentToCreate] =
-    jsonOf[F, DocumentToCreate]
 
   implicit val bouPageEntityDecoder: EntityDecoder[F, PaginatedResult[BackOfficeUserToRead]] =
     jsonOf[F, PaginatedResult[BackOfficeUserToRead]]

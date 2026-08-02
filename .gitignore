@@ -1,6 +1,7 @@
 logs
 target
 .bloop
+/.bsp
 .hydra
 /.idea
 /.idea_modules
@@ -8,6 +9,7 @@ target
 /.metals
 /.project
 /.settings
+/.vscode
 /RUNNING_PID
 **/auth.key
 **/auth.key.pub

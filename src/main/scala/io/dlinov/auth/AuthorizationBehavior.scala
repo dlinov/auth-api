@@ -2,8 +2,6 @@ package io.dlinov.auth
 
 import io.dlinov.auth.domain.ServiceError
 import io.dlinov.auth.domain.auth.entities.{BackOfficeUser, Scopes}
-import io.dlinov.auth.domain.ServiceError
-import io.dlinov.auth.domain.auth.entities.{BackOfficeUser, Scopes}
 
 trait AuthorizationBehavior {
   protected def scopes: Scopes
@@ -12,7 +10,7 @@ trait AuthorizationBehavior {
       scopeTypes: Scopes.Type*
   )(user: BackOfficeUser): Either[ServiceError, Unit] = {
     val required = scopeTypes.map(scopes.byType).toSet + scopes.parent
-    if (user.permissions.exists(p ⇒ required.contains(p.scope.name))) {
+    if (user.permissions.exists(p => required.contains(p.scope.name))) {
       AuthorizationBehavior.success
     } else {
       Left(
@@ -22,15 +20,15 @@ trait AuthorizationBehavior {
     }
   }
 
-  val requireCreateAccess: BackOfficeUser ⇒ Either[ServiceError, Unit] =
+  val requireCreateAccess: BackOfficeUser => Either[ServiceError, Unit] =
     checkPermissions(Scopes.Create)(_)
-  val requireReadAccess: BackOfficeUser ⇒ Either[ServiceError, Unit] =
+  val requireReadAccess: BackOfficeUser => Either[ServiceError, Unit] =
     checkPermissions(Scopes.Detail)(_)
-  val requireUpdateAccess: BackOfficeUser ⇒ Either[ServiceError, Unit] =
+  val requireUpdateAccess: BackOfficeUser => Either[ServiceError, Unit] =
     checkPermissions(Scopes.Update)(_)
-  val requireDeleteAccess: BackOfficeUser ⇒ Either[ServiceError, Unit] =
+  val requireDeleteAccess: BackOfficeUser => Either[ServiceError, Unit] =
     checkPermissions(Scopes.Delete)(_)
-  val requireFullAccess: BackOfficeUser ⇒ Either[ServiceError, Unit] =
+  val requireFullAccess: BackOfficeUser => Either[ServiceError, Unit] =
     checkPermissions(Scopes.Parent)(_)
 }
 

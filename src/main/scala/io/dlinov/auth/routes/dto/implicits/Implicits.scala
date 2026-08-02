@@ -9,8 +9,6 @@ import io.dlinov.auth.routes.dto.{
   BackOfficeUserToRead,
   BusinessUnitToRead,
   CollectionResponse,
-  Document,
-  DocumentToRead,
   PermissionBlueprint,
   PermissionToCreate,
   PermissionToRead,
@@ -18,7 +16,6 @@ import io.dlinov.auth.routes.dto.{
   ScopeToRead,
   WrappedId
 }
-import io.dlinov.auth.domain.auth.entities._
 import io.dlinov.auth.routes.dto._
 
 object Implicits {
@@ -109,26 +106,12 @@ object Implicits {
       )
   }
 
-  implicit class DocumentConverter(val d: Document) extends AnyVal {
-    def asApi =
-      DocumentToRead(
-        id = d.documentId,
-        customerId = d.customerId,
-        documentType = d.documentType,
-        documentTypeIdentifier = d.documentTypeIdentifier,
-        purpose = d.purpose,
-        link = d.link,
-        createdBy = d.createdBy,
-        createdAt = d.createdAt
-      )
-  }
-
   implicit class CollectionConverter[T](val seq: Seq[T]) extends AnyVal {
     def col = CollectionResponse(seq, seq.size)
   }
 
   implicit class PaginatedResultFunctor[T](val page: PaginatedResult[T]) extends AnyVal {
-    def map[R](f: T ⇒ R): PaginatedResult[R] = {
+    def map[R](f: T => R): PaginatedResult[R] = {
       val convertedResults = page.results.map(f)
       page.copy(results = convertedResults)
     }

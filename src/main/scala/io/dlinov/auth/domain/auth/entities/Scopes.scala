@@ -9,12 +9,12 @@ class Scopes(val parent: String) {
 
   val delete: String = s"${parent}_delete"
 
-  def byType: Scopes.Type ⇒ String = {
-    case Scopes.Parent ⇒ parent
-    case Scopes.Create ⇒ create
-    case Scopes.Detail ⇒ detail
-    case Scopes.Update ⇒ update
-    case Scopes.Delete ⇒ delete
+  def byType: Scopes.Type => String = {
+    case Scopes.Parent => parent
+    case Scopes.Create => create
+    case Scopes.Detail => detail
+    case Scopes.Update => update
+    case Scopes.Delete => delete
   }
 }
 

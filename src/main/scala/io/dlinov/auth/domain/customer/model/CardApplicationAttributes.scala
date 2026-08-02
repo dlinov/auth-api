@@ -3,7 +3,6 @@ package io.dlinov.auth.domain.customer.model
 import java.util.UUID
 
 import io.dlinov.auth.domain.customer.model.CustomerAttributes.{Address, NameAttribute}
-import io.dlinov.auth.domain.customer.model.CustomerAttributes.{Address, NameAttribute}
 import io.dlinov.auth.util.Implicits._
 
 object CardApplicationAttributes {

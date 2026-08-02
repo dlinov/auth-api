@@ -1,38 +1,45 @@
 package io.dlinov.auth.routes.proxied
 
-import cats.effect.{Resource, Sync}
+import cats.effect.Async
 import io.dlinov.auth.AppConfig.ProxyConfig
-import io.dlinov.auth.routes.Routes
-import org.http4s.Request
-import org.http4s.client.Client
-import org.http4s.rho.RhoRoutes
-import io.dlinov.auth.AppConfig.ProxyConfig
-import io.dlinov.auth.routes.Routes
+import io.dlinov.auth.AuthorizationBehavior
+import io.dlinov.auth.domain.auth.entities.{BackOfficeUser, Scopes}
+import io.dlinov.auth.routes.{AuthenticatedRoutes, Routes}
 import io.dlinov.auth.routes.Routes.ApiPrefix
+import org.http4s.AuthedRoutes
+import org.http4s.client.Client
 
+/** Proxies read-only reference data (types/currencies/account_types) to the downstream service.
+  *
+  * Unlike `ProxiedRoute` (a single root, all 4 CRUD-shaped methods, per-method permission), this
+  * fronts three distinct GET-only roots behind a single read-permission check, since none of them
+  * support mutation. It was previously mounted as a fully anonymous/unauthenticated route; it now
+  * requires authentication and the `types` read permission like every other proxy, so there is no
+  * public wildcard proxy endpoint left in the service.
+  */
 class TypesProxy[F[_]](
-    override val httpClientResource: Resource[F, Client[F]],
+    override val httpClient: Client[F],
     override val proxyConfig: ProxyConfig
-)(
-    implicit override protected val syncF: Sync[F]
-) extends Routes[F]
+)(implicit
+    override protected val asyncF: Async[F]
+) extends AuthenticatedRoutes[F]
+    with AuthorizationBehavior
     with ProxySupport[F] {
 
   protected val routeRoot: String        = ApiPrefix + "/types"
   protected val currenciesRoot: String   = ApiPrefix + "/currencies"
   protected val accountTypesRoot: String = ApiPrefix + "/account_types"
 
-  override def routes: RhoRoutes[F] = new RhoRoutes[F] {
-    GET / `routeRoot` / * |>> { (req: Request[F], _: List[String]) ⇒
-      proxyRequest(req)
-    }
+  override protected def scopes: Scopes = new Scopes("types")
 
-    GET / `currenciesRoot` / * |>> { (req: Request[F], _: List[String]) ⇒
-      proxyRequest(req)
-    }
+  private def isUnderAnyRoot(path: org.http4s.Uri.Path): Boolean =
+    Routes.isPathUnderRoot(routeRoot)(path) ||
+      Routes.isPathUnderRoot(currenciesRoot)(path) ||
+      Routes.isPathUnderRoot(accountTypesRoot)(path)
 
-    GET / `accountTypesRoot` / * |>> { (req: Request[F], _: List[String]) ⇒
-      proxyRequest(req)
+  override def routes: AuthedRoutes[BackOfficeUser, F] =
+    AuthedRoutes.of {
+      case req @ GET -> path as user if isUnderAnyRoot(path) =>
+        proxyAuthedRequest(requireReadAccess)(req.req, user)
     }
-  }
 }

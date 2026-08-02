@@ -3,20 +3,17 @@ package io.dlinov.auth.dao.hikari
 import java.time.{Instant, ZoneOffset, ZonedDateTime}
 import java.util.UUID
 
-import cats.effect.{Async, Blocker, ContextShift}
+import cats.effect.{Async, Resource, Sync}
 import com.zaxxer.hikari.{HikariConfig, HikariDataSource}
 import doobie._
+import doobie.implicits.javatimedrivernative.JavaInstantMeta
 import doobie.syntax.string._
 import doobie.hikari.HikariTransactor
-import doobie.util.log.{ExecFailure, LogHandler, ProcessingFailure, Success}
-import io.dlinov.auth.dao.DBFApi
-import io.dlinov.auth.dao.hikari.ec.{ConnectECWrapper, TransactECWrapper}
-import io.dlinov.auth.domain.auth.entities.Email
-import io.dlinov.auth.routes.dto.PermissionKey
-import io.dlinov.auth.domain.auth.entities.Email
+import doobie.util.log.{ExecFailure, LogEvent, LogHandler, ProcessingFailure, Success}
 import io.dlinov.auth.AppConfig.DbConfig
 import io.dlinov.auth.dao.DBFApi
-import io.dlinov.auth.dao.hikari.ec.{ConnectECWrapper, TransactECWrapper}
+import io.dlinov.auth.dao.hikari.ec.ConnectECWrapper
+import io.dlinov.auth.domain.auth.entities.Email
 import io.dlinov.auth.routes.dto.PermissionKey
 import io.dlinov.auth.routes.dto.PermissionKeys.{
   BusinessUnitAndRolePermissionKey,
@@ -25,23 +22,17 @@ import io.dlinov.auth.routes.dto.PermissionKeys.{
 import org.slf4j.LoggerFactory
 
 class HikariDBFApi[F[_]: Async](
-    dbConfig: DbConfig,
-    connectEC: ConnectECWrapper,
-    transactEC: TransactECWrapper
-)(implicit val cs: ContextShift[F])
-    extends DBFApi[F] {
+    dataSource: HikariDataSource,
+    connectEC: ConnectECWrapper
+) extends DBFApi[F] {
 
-  val config = new HikariConfig()
-  config.setJdbcUrl(dbConfig.url)
-  config.setUsername(dbConfig.user)
-  config.setPassword(dbConfig.password)
-  config.setMinimumIdle(dbConfig.minIdle)
-  config.setMaximumPoolSize(dbConfig.poolSize)
-
-  println(config.getJdbcUrl)
-  private val hikariDataSource = new HikariDataSource(config)
+  // doobie 1.0 dropped cats-effect 2's Blocker/ContextShift: blocking JDBC calls now run via
+  // Async[F]'s own blocking support, so only a single (connection-acquisition) EC is needed.
+  // The HikariDataSource itself is built and its lifecycle managed by the caller (see
+  // Bootable/CatsIOBoot/Http4sSpec) via cats.effect.Resource, so it is created and closed
+  // exactly once for the application's/test suite's lifetime rather than per-DAO-instance.
   private val hikariTransactor: HikariTransactor[F] =
-    HikariTransactor[F](hikariDataSource, connectEC.ec, Blocker.liftExecutionContext(transactEC.ec))
+    HikariTransactor[F](dataSource, connectEC.ec, Some(HikariDBFApi.logHandler[F]))
 
   override val transactor: F[Transactor[F]] = {
     Async[F].delay[Transactor[F]](hikariTransactor)
@@ -50,34 +41,53 @@ class HikariDBFApi[F[_]: Async](
 
 object HikariDBFApi {
 
-  implicit val lh: LogHandler = {
-    val logger = LoggerFactory.getLogger("sql")
-    LogHandler {
+  private val sqlLogger = LoggerFactory.getLogger("sql")
 
-      // TODO: get rid of .toArray calls
-      case Success(s, a, e1, e2) ⇒
-        logger.debug(s"""Successful Statement Execution:
-            |  ${s.lines.dropWhile(_.trim.isEmpty).toArray.mkString("\n  ")}
-            | arguments = [${a.mkString(", ")}]
-            | elapsed = ${e1.toMillis} ms exec + ${e2.toMillis} ms processing (${(e1 + e2).toMillis} ms total)
-          """.stripMargin)
+  /** Builds the single `HikariDataSource` backing the application (or a test suite) as a
+    * `Resource`, so it is guaranteed to be closed (and its underlying connection pool released)
+    * exactly once, on application shutdown / test suite `afterAll`, rather than never being closed
+    * at all as previously (`new HikariDataSource(dbConfig)` was constructed with no corresponding
+    * `.close()` call anywhere).
+    */
+  def dataSourceResource[F[_]: Sync](dbConfig: DbConfig): Resource[F, HikariDataSource] = {
+    Resource.make(Sync[F].delay {
+      val config = new HikariConfig()
+      config.setJdbcUrl(dbConfig.url)
+      config.setUsername(dbConfig.user)
+      config.setPassword(dbConfig.password)
+      config.setMinimumIdle(dbConfig.minIdle)
+      config.setMaximumPoolSize(dbConfig.poolSize)
+      new HikariDataSource(config)
+    })(ds => Sync[F].delay(ds.close()))
+  }
 
-      case ProcessingFailure(s, a, e1, e2, t) ⇒
-        logger.warn(s"""Failed Resultset Processing:
-            |  ${s.lines.dropWhile(_.trim.isEmpty).toArray.mkString("\n  ")}
-            | arguments = [${a.mkString(", ")}]
-            | elapsed = ${e1.toMillis} ms exec + ${e2.toMillis} ms processing (failed) (${(e1 + e2).toMillis} ms total)
-            | failure = ${t.getMessage}
-          """.stripMargin)
+  def logHandler[F[_]: Sync]: LogHandler[F] = new LogHandler[F] {
+    override def run(logEvent: LogEvent): F[Unit] = Sync[F].delay {
+      logEvent match {
+        // TODO: get rid of .toArray calls
+        case Success(s, a, _, e1, e2) =>
+          sqlLogger.debug(s"""Successful Statement Execution:
+              |  ${s.linesIterator.dropWhile(_.trim.isEmpty).toArray.mkString("\n  ")}
+              | arguments = [${a.allParams.mkString(", ")}]
+              | elapsed = ${e1.toMillis} ms exec + ${e2.toMillis} ms processing (${(e1 + e2).toMillis} ms total)
+            """.stripMargin)
 
-      case ExecFailure(s, a, e1, t) ⇒
-        logger.error(s"""Failed Statement Execution:
-            |  ${s.lines.dropWhile(_.trim.isEmpty).toArray.mkString("\n  ")}
-            | arguments = [${a.mkString(", ")}]
-            | elapsed = ${e1.toMillis} ms exec (failed)
-            | failure = ${t.getMessage}
-          """.stripMargin)
+        case ProcessingFailure(s, a, _, e1, e2, t) =>
+          sqlLogger.warn(s"""Failed Resultset Processing:
+              |  ${s.linesIterator.dropWhile(_.trim.isEmpty).toArray.mkString("\n  ")}
+              | arguments = [${a.allParams.mkString(", ")}]
+              | elapsed = ${e1.toMillis} ms exec + ${e2.toMillis} ms processing (failed) (${(e1 + e2).toMillis} ms total)
+              | failure = ${t.getMessage}
+            """.stripMargin)
 
+        case ExecFailure(s, a, _, e1, t) =>
+          sqlLogger.error(s"""Failed Statement Execution:
+              |  ${s.linesIterator.dropWhile(_.trim.isEmpty).toArray.mkString("\n  ")}
+              | arguments = [${a.allParams.mkString(", ")}]
+              | elapsed = ${e1.toMillis} ms exec (failed)
+              | failure = ${t.getMessage}
+            """.stripMargin)
+      }
     }
   }
 
@@ -98,9 +108,9 @@ object HikariDBFApi {
 
   implicit val pKeyRead: Read[PermissionKey] =
     Read[(Option[UUID], Option[UUID], Option[UUID])].map {
-      case (_, Some(userId), _)          ⇒ UserPermissionKey(userId)
-      case (Some(buId), _, Some(roleId)) ⇒ BusinessUnitAndRolePermissionKey(buId, roleId)
-      case _ ⇒
+      case (_, Some(userId), _)          => UserPermissionKey(userId)
+      case (Some(buId), _, Some(roleId)) => BusinessUnitAndRolePermissionKey(buId, roleId)
+      case _                             =>
         throw new IllegalArgumentException(
           "Row should be either user or business unit/role permission"
         )
@@ -108,7 +118,7 @@ object HikariDBFApi {
 
   implicit val pKeyWrite: Write[PermissionKey] =
     Write[(Option[UUID], Option[UUID], Option[UUID])].contramap {
-      case BusinessUnitAndRolePermissionKey(buId, roleId) ⇒ (Some(buId), None, Some(roleId))
-      case UserPermissionKey(userId)                      ⇒ (None, Some(userId), None)
+      case BusinessUnitAndRolePermissionKey(buId, roleId) => (Some(buId), None, Some(roleId))
+      case UserPermissionKey(userId)                      => (None, Some(userId), None)
     }
 }

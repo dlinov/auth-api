@@ -4,7 +4,7 @@ import java.time.ZonedDateTime
 import java.util.UUID
 
 import cats.data.OptionT
-import cats.effect.Effect
+import cats.effect.Async
 import cats.syntax.either._
 import cats.syntax.flatMap._
 import cats.syntax.functor._
@@ -15,10 +15,8 @@ import io.dlinov.auth.dao.DBFApi
 import io.dlinov.auth.dao.generic.ScopeFDao
 import io.dlinov.auth.domain.PaginatedResult
 import io.dlinov.auth.domain.auth.entities.Scope
-import io.dlinov.auth.domain.PaginatedResult
-import io.dlinov.auth.domain.auth.entities.Scope
 
-class ScopeHikariDao[F[_]: Effect](db: DBFApi[F]) extends ScopeFDao[F] {
+class ScopeHikariDao[F[_]: Async](db: DBFApi[F]) extends ScopeFDao[F] {
 
   import HikariDBFApi._
   import ScopeHikariDao._
@@ -31,13 +29,13 @@ class ScopeHikariDao[F[_]: Effect](db: DBFApi[F]) extends ScopeFDao[F] {
       reactivate: Boolean
   ): F[DaoResponse[Scope]] = {
     for {
-      xa ← db.transactor
-      result ← (if (reactivate) {
-                  reactivateInternal(parentId, name, description, createdBy)
-                } else {
-                  createInternal(parentId, name, description, createdBy)
-                }).transact(xa).attemptSql
-    } yield result.leftMap { exc ⇒
+      xa     <- db.transactor
+      result <- (if (reactivate) {
+                   reactivateInternal(parentId, name, description, createdBy)
+                 } else {
+                   createInternal(parentId, name, description, createdBy)
+                 }).transact(xa).attemptSql
+    } yield result.leftMap { exc =>
       val msg = s"Unexpected error in .create($name,..): " + exc.getMessage
       logger.warn(msg, exc)
       genericDbError(msg)
@@ -46,9 +44,9 @@ class ScopeHikariDao[F[_]: Effect](db: DBFApi[F]) extends ScopeFDao[F] {
 
   override def findById(id: UUID): F[DaoResponse[Option[Scope]]] = {
     for {
-      xa     ← db.transactor
-      result ← findByIdInternal(id).transact(xa).attemptSql
-    } yield result.leftMap { exc ⇒
+      xa     <- db.transactor
+      result <- findByIdInternal(id).transact(xa).attemptSql
+    } yield result.leftMap { exc =>
       val msg = s"Unexpected error in .findById($id): " + exc.getMessage
       logger.warn(msg, exc)
       genericDbError(msg)
@@ -60,9 +58,9 @@ class ScopeHikariDao[F[_]: Effect](db: DBFApi[F]) extends ScopeFDao[F] {
       maybeOffset: Option[Int]
   ): F[DaoResponse[PaginatedResult[Scope]]] = {
     for {
-      xa     ← db.transactor
-      result ← findAllInternal(maybeLimit, maybeOffset).transact(xa).attemptSql
-    } yield result.leftMap { exc ⇒
+      xa     <- db.transactor
+      result <- findAllInternal(maybeLimit, maybeOffset).transact(xa).attemptSql
+    } yield result.leftMap { exc =>
       val msg = s"Unexpected error in .findAll: " + exc.getMessage
       logger.warn(msg, exc)
       genericDbError(msg)
@@ -75,9 +73,9 @@ class ScopeHikariDao[F[_]: Effect](db: DBFApi[F]) extends ScopeFDao[F] {
       updatedBy: String
   ): F[DaoResponse[Option[Scope]]] = {
     for {
-      xa                       ← db.transactor
-      maybeUpdatedScopeOrError ← updateInternal(id, description, updatedBy).transact(xa).attemptSql
-    } yield maybeUpdatedScopeOrError.leftMap { exc ⇒
+      xa                       <- db.transactor
+      maybeUpdatedScopeOrError <- updateInternal(id, description, updatedBy).transact(xa).attemptSql
+    } yield maybeUpdatedScopeOrError.leftMap { exc =>
       val msg = s"Unexpected error in .update($id,..): " + exc.getMessage
       logger.warn(msg, exc)
       genericDbError(msg)
@@ -86,9 +84,9 @@ class ScopeHikariDao[F[_]: Effect](db: DBFApi[F]) extends ScopeFDao[F] {
 
   override def remove(id: UUID, updatedBy: String): F[DaoResponse[Option[UUID]]] = {
     (for {
-      xa      ← db.transactor
-      maybeId ← removeInternal(id, updatedBy).transact(xa)
-    } yield maybeId).attemptSql.map(_.leftMap { exc ⇒
+      xa      <- db.transactor
+      maybeId <- removeInternal(id, updatedBy).transact(xa)
+    } yield maybeId).attemptSql.map(_.leftMap { exc =>
       val msg = s"Unexpected error in .update($id,..): " + exc.getMessage
       logger.warn(msg, exc)
       genericDbError(msg)
@@ -103,8 +101,8 @@ class ScopeHikariDao[F[_]: Effect](db: DBFApi[F]) extends ScopeFDao[F] {
   ): ConnectionIO[Scope] = {
     val id = UUID.randomUUID()
     for {
-      _          ← insertQuery(id, parentId, name, description, createdBy).update.run
-      maybeScope ← fetchByIdInternal(id)
+      _          <- insertQuery(id, parentId, name, description, createdBy).update.run
+      maybeScope <- fetchByIdInternal(id)
     } yield maybeScope
   }
 
@@ -115,13 +113,13 @@ class ScopeHikariDao[F[_]: Effect](db: DBFApi[F]) extends ScopeFDao[F] {
       createdBy: String
   ): ConnectionIO[Scope] = {
     for {
-      maybeExistingScope ← findByNameInternal(name)
-      upsertedScope ← maybeExistingScope.fold {
+      maybeExistingScope <- findByNameInternal(name)
+      upsertedScope      <- maybeExistingScope.fold {
         createInternal(parentId, name, description, createdBy)
-      } { _ ⇒
+      } { _ =>
         for {
-          _                ← reactivateQuery(parentId, name, description, createdBy).update.run
-          reactivatedScope ← fetchByNameInternal(name)
+          _                <- reactivateQuery(parentId, name, description, createdBy).update.run
+          reactivatedScope <- fetchByNameInternal(name)
         } yield reactivatedScope
       }
     } yield upsertedScope
@@ -156,10 +154,10 @@ class ScopeHikariDao[F[_]: Effect](db: DBFApi[F]) extends ScopeFDao[F] {
       maybeOffset: Option[Int]
   ): ConnectionIO[PaginatedResult[Scope]] = {
     for {
-      page ← queryAll(maybeLimit, maybeOffset)
+      page <- queryAll(maybeLimit, maybeOffset)
         .query[Scope]
         .to[List]
-      total ← countAll.query[Int].unique
+      total <- countAll.query[Int].unique
     } yield PaginatedResult(
       total,
       page,
@@ -174,17 +172,17 @@ class ScopeHikariDao[F[_]: Effect](db: DBFApi[F]) extends ScopeFDao[F] {
       updatedBy: String
   ): ConnectionIO[Option[Scope]] = {
     for {
-      _          ← updateQuery(id, description, updatedBy).update.run
-      maybeScope ← findByIdInternal(id)
+      _          <- updateQuery(id, description, updatedBy).update.run
+      maybeScope <- findByIdInternal(id)
     } yield maybeScope
   }
 
   private[hikari] def removeInternal(id: UUID, updatedBy: String): ConnectionIO[Option[UUID]] = {
     val uTime = nowUTC
     (for {
-      existingScope ← OptionT(findByIdInternal(id))
-      _             ← OptionT.liftF(PermissionHikariDao.deleteByScopeId(id, updatedBy, uTime).update.run)
-      _             ← OptionT.liftF(deleteQuery(id, updatedBy, uTime).update.run)
+      existingScope <- OptionT(findByIdInternal(id))
+      _ <- OptionT.liftF(PermissionHikariDao.deleteByScopeId(id, updatedBy, uTime).update.run)
+      _ <- OptionT.liftF(deleteQuery(id, updatedBy, uTime).update.run)
     } yield existingScope.id).value
   }
 }
@@ -218,8 +216,8 @@ object ScopeHikariDao {
   private def queryByName(name: String): Fragment = SelectFromTable ++ whereByNameAndActive(name)
 
   private def queryAll(maybeLimit: Option[Int], maybeOffset: Option[Int]): Fragment = {
-    val limit  = maybeLimit.fold(EmptyFragment)(lmt ⇒ fr"LIMIT $lmt")
-    val offset = maybeOffset.fold(EmptyFragment)(off ⇒ fr"OFFSET $off")
+    val limit  = maybeLimit.fold(EmptyFragment)(lmt => fr"LIMIT $lmt")
+    val offset = maybeOffset.fold(EmptyFragment)(off => fr"OFFSET $off")
     SelectFromTable ++ fr"WHERE status = 1" ++ limit ++ offset
   }
 

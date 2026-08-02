@@ -56,12 +56,12 @@ object ServiceError {
   def unknownError(id: UUID, message: String): ServiceError =
     ServiceError(id, ErrorCodes.Unknown, message)
 
-  def fromDaoError: DaoError ⇒ ServiceError = {
-    case err: EntityAlreadyExistsError ⇒
+  def fromDaoError: DaoError => ServiceError = {
+    case err: EntityAlreadyExistsError =>
       duplicateEntityError(err.id, err.message, err.field, err.value)
-    case err: EntityNotFoundError      ⇒ notFoundEntityError(err.id, err.message)
-    case err: ConstraintViolationError ⇒ validationError(err.id, err.message)
-    case err: WrongCredentials         ⇒ notAuthorizedError(err.id, err.message)
-    case e                             ⇒ unknownError(e.id, e.message)
+    case err: EntityNotFoundError      => notFoundEntityError(err.id, err.message)
+    case err: ConstraintViolationError => validationError(err.id, err.message)
+    case err: WrongCredentials         => notAuthorizedError(err.id, err.message)
+    case e                             => unknownError(e.id, e.message)
   }
 }
